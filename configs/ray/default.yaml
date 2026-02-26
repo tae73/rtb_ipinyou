@@ -1,0 +1,6 @@
+num_cpus: null
+num_gpus: 0
+memory: null
+object_store_memory: null
+local_mode: false
+ignore_reinit_error: true

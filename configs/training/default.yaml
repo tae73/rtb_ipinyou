@@ -1,0 +1,21 @@
+batch_size: 4096
+learning_rate: 0.001
+weight_decay: 0.00001
+num_epochs: 50
+warmup_steps: 1000
+gradient_clip: 1.0
+early_stopping_patience: 5
+checkpoint_dir: results/models
+save_every_n_epochs: 5
+log_every_n_steps: 100
+use_wandb: true
+wandb_project: rtb-ipinyou
+wandb_run_name: null    # Auto-generated if null
+eval_every: 1           # Compute val metrics every N epochs
+quiet: false            # Suppress progress output
+# Optimizer
+optimizer: adamw
+beta1: 0.9
+beta2: 0.999
+scheduler: cosine
+total_steps: 100000

@@ -1,0 +1,19 @@
+model_type: lgb
+n_folds: 5
+clip_min: 0.01
+clip_max: 0.99
+calibrate: true
+random_seed: 42
+lgb_params:
+  objective: binary
+  metric: auc
+  num_leaves: 31
+  learning_rate: 0.05
+  n_estimators: 200
+  min_child_samples: 20
+  verbose: -1
+  n_jobs: -1
+logistic_params:
+  max_iter: 1000
+  solver: lbfgs
+  C: 1.0

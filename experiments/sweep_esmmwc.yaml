@@ -1,0 +1,40 @@
+# W&B Sweep config for ESMM-WC (2-tower, ESMM constraint only)
+# Bayesian optimization with Hyperband early termination
+#
+# Usage:
+#   python scripts/sweep.py create --config experiments/sweep_esmmwc.yaml
+#   python scripts/sweep.py agent --sweep-id <id> --data-dir ... --model-dir ... --model-type esmmwc
+
+method: bayes
+metric:
+  name: val_total
+  goal: minimize
+
+parameters:
+  # Architecture
+  embedding_dim:
+    values: [8, 16, 32]
+  hidden_dims:
+    values: ["64,32", "128,64", "256,128", "256,128,64"]
+  win_hidden_dims:
+    values: ["32,16", "64,32", "128,64"]
+  dropout:
+    distribution: uniform
+    min: 0.1
+    max: 0.5
+
+  # Training
+  learning_rate:
+    distribution: log_uniform_values
+    min: 0.0001
+    max: 0.01
+  batch_size:
+    values: [2048, 4096, 8192]
+  epochs:
+    value: 50
+
+early_terminate:
+  type: hyperband
+  min_iter: 10
+  eta: 3
+  s: 2

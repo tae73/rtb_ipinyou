@@ -1,0 +1,10 @@
+defaults:
+  - data: ipinyou
+  - features: default
+  - training: default
+  - model: escm2wc_dr
+  - debiasing: win_propensity
+  - serving: default
+  - bidding: default
+  - ray: default
+  - distributed: default

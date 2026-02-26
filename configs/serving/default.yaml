@@ -1,0 +1,11 @@
+model_path: results/models/escm2_wc.onnx
+host: "0.0.0.0"
+port: 8000
+p50_target_ms: 20.0
+p95_target_ms: 50.0
+p99_target_ms: 80.0
+use_quantization: true
+quantization_type: int8
+feast_repo_path: configs/feast
+redis_host: localhost
+redis_port: 6379

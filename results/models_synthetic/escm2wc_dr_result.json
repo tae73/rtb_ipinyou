@@ -1,0 +1,28 @@
+{
+  "model_name": "escm2wc_dr",
+  "model_type": "escm2wc",
+  "debiasing": "dr",
+  "config": {
+    "embedding_dim": 16,
+    "hidden_dims": [
+      128,
+      64
+    ],
+    "win_hidden_dims": [
+      64,
+      32
+    ],
+    "n_cat_features": 17,
+    "n_num_features": 13
+  },
+  "training_time": 86.59120011329651,
+  "epochs": 50,
+  "best_val_loss": 1.4897987842559814,
+  "test_win_auc": 0.8090143255511967,
+  "test_ctr_biased_auc": 0.8370757599662426,
+  "test_ctr_biased_ece": 0.037150905758978454,
+  "test_wctr_auc": 0.8396961889250554,
+  "test_wctr_ece": 0.012168262379057703,
+  "test_ctr_ieb": 0.061407878150900735,
+  "test_wctr_ieb": 0.014839038912717208
+}

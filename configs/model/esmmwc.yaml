@@ -1,0 +1,15 @@
+# ESMM-WC: 2-tower (Win + CTR), ESMM constraint only
+# feature_dims is runtime — not included here
+embed_dim: 32
+hidden_dims:
+  - 128
+  - 64
+win_hidden_dims:
+  - 64
+  - 32
+dropout: 0.3
+win_weight: 1.0
+ctr_weight: 1.0
+joint_weight: 1.0
+use_fm_interaction: true
+use_layer_norm: false

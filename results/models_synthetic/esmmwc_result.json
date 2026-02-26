@@ -1,0 +1,28 @@
+{
+  "model_name": "esmmwc",
+  "model_type": "esmmwc",
+  "debiasing": "none",
+  "config": {
+    "embedding_dim": 16,
+    "hidden_dims": [
+      128,
+      64
+    ],
+    "win_hidden_dims": [
+      64,
+      32
+    ],
+    "n_cat_features": 17,
+    "n_num_features": 13
+  },
+  "training_time": 73.94997596740723,
+  "epochs": 50,
+  "best_val_loss": 1.1945042371749879,
+  "test_win_auc": 0.8089687509227647,
+  "test_ctr_biased_auc": 0.8342623661577794,
+  "test_ctr_biased_ece": 0.04223956150892086,
+  "test_wctr_auc": 0.8351721464159598,
+  "test_wctr_ece": 0.01648155050110072,
+  "test_ctr_ieb": 0.04477365746188737,
+  "test_wctr_ieb": 0.017097078931319416
+}

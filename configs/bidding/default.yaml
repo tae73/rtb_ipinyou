@@ -1,0 +1,6 @@
+cpc_target: 50.0
+shading_factor: 0.8
+min_bid: 1.0
+max_bid: 300.0
+daily_budget: 10000.0
+pacing_type: pid

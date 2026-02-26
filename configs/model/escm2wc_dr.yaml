@@ -1,0 +1,23 @@
+# ESCM2-WC: 3-tower with DR debiasing (primary)
+# feature_dims is runtime — not included here
+embed_dim: 32
+hidden_dims:
+  - 128
+  - 64
+win_hidden_dims:
+  - 64
+  - 32
+dropout: 0.3
+loss_type: dr
+dr_loss_type: mse
+win_eps: 0.05
+max_weight: 10.0
+normalize_weights: true
+cfr_lambda: 0.1
+cfr_type: consistency
+win_weight: 1.0
+ctr_weight: 1.0
+joint_weight: 1.0
+impute_loss_weight: 0.5
+use_fm_interaction: true
+use_layer_norm: false

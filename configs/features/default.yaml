@@ -1,0 +1,67 @@
+# Feature classification — aligned with CATEGORICAL_FEATURES in engineering.py
+categorical_features:
+  # ID features
+  - region
+  - city
+  - adexchange
+  - advertiser
+  # Slot categorical (IAB standard sizes; continuous info in slot_area/aspect_ratio)
+  - slotwidth
+  - slotheight
+  - slotvisibility
+  - slotformat
+  - slot_size_group
+  # Time categorical (cyclical info in hour_sin/cos)
+  - hour
+  - minute
+  - weekday
+  # Derived binary/categorical
+  - is_weekend
+  - is_peak_hour
+  - region_group
+  # High-cardinality (hash-encoded)
+  - domain_hash
+  - creative_hash
+
+numerical_features:
+  # Price/competition
+  - bidprice
+  - slotprice
+  - bid_floor_ratio
+  # Slot continuous
+  - slot_area
+  - slot_area_log
+  - slot_aspect_ratio
+  # Time cyclical
+  - hour_sin
+  - hour_cos
+  # Region
+  - region_freq
+  # High-cardinality frequency
+  - domain_freq
+  - domain_freq_log
+  - creative_freq
+  - creative_freq_log
+
+# Hash encoding settings (high-cardinality features)
+hash_encoding:
+  domain_buckets: 10000
+  creative_buckets: 5000
+  hash_seed: 42
+
+# Normalization (neural models only, LightGBM unaffected)
+normalization:
+  method: zscore
+
+# Usertag
+usertag_vocab_size: 10000
+embedding_dim: 16
+unk_idx: 0
+# Split settings
+split_method: temporal
+train_ratio: 0.7
+val_ratio: 0.15
+# Usertag encoding
+usertag_encoding: summary
+usertag_top_n: 100
+usertag_min_count: 10
