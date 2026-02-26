@@ -36,3 +36,9 @@ results/models/
 
 # W&B
 wandb/
+
+# Project local
+CLAUDE.md
+PLAN.md
+elice-cloud-ondemand-776c7f52-4c11-4cf4-8442-ca7b7e4ebaf4.pem
+elice.txt
