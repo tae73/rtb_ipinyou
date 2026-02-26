@@ -63,6 +63,9 @@ class TrainingConfig(NamedTuple):
     log_every_n_steps: int = 100
     use_wandb: bool = True
     wandb_project: str = "rtb-ipinyou"
+    wandb_run_name: Optional[str] = None
+    eval_every: int = 1
+    quiet: bool = False
 
 
 class OptimizerConfig(NamedTuple):
