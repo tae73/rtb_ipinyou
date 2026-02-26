@@ -1,11 +1,12 @@
 """Distributed training utilities for JAX SPMD.
 
-Provides grain-based data loading, JAX device mesh management,
+Provides vectorized numpy data loading, JAX device mesh management,
 LR scheduling with warmup, and orbax checkpoint save/restore.
 """
 
 from src.distributed.data_loader import (
     RTBDataSource,
+    NumpyBatchIterator,
     materialize_to_source,
     create_train_loader,
     create_eval_loader,
@@ -31,6 +32,7 @@ from src.distributed.checkpoint import (
 __all__ = [
     # Data loading
     "RTBDataSource",
+    "NumpyBatchIterator",
     "materialize_to_source",
     "create_train_loader",
     "create_eval_loader",

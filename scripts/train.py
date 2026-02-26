@@ -927,7 +927,7 @@ def esmmwc(
         help="Limit training samples (for smoke testing)",
     ),
     eval_every: int = typer.Option(
-        1,
+        5,
         "--eval-every",
         help="Compute val AUC/ECE/IEB metrics every N epochs",
     ),
@@ -1136,7 +1136,7 @@ def escm2wc(
         help="Limit training samples (for smoke testing)",
     ),
     eval_every: int = typer.Option(
-        1,
+        5,
         "--eval-every",
         help="Compute val AUC/ECE/IEB metrics every N epochs",
     ),
