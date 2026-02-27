@@ -874,6 +874,21 @@ def esmmwc(
         "--dropout",
         help="Dropout rate",
     ),
+    win_weight: float = typer.Option(
+        1.0,
+        "--win-weight",
+        help="Win loss weight",
+    ),
+    ctr_weight: float = typer.Option(
+        0.0,
+        "--ctr-weight",
+        help="CTR loss weight (ESMM has no direct CVR supervision; 0.0 per Ma et al. 2018)",
+    ),
+    joint_weight: float = typer.Option(
+        1.0,
+        "--joint-weight",
+        help="Joint (ESMM) loss weight (1.0 per Ma et al. 2018)",
+    ),
     quiet: bool = typer.Option(
         False,
         "--quiet",
@@ -920,6 +935,11 @@ def esmmwc(
         0.0,
         "--gradient-clip",
         help="Gradient clipping norm (0 = disabled)",
+    ),
+    weight_decay: float = typer.Option(
+        1e-5,
+        "--weight-decay",
+        help="AdamW weight decay coefficient (0 = vanilla Adam)",
     ),
     max_samples: Optional[int] = typer.Option(
         None,
@@ -978,12 +998,16 @@ def esmmwc(
         scheduler=scheduler,
         warmup_steps=warmup_steps,
         gradient_clip=gradient_clip,
+        weight_decay=weight_decay,
         max_samples=max_samples,
         eval_every_n_epochs=eval_every,
         use_wandb=use_wandb,
         wandb_project=wandb_project,
         wandb_run_name=wandb_run_name,
         dropout=dropout,
+        win_weight=win_weight,
+        ctr_weight=ctr_weight,
+        joint_weight=joint_weight,
     )
 
 
@@ -1069,14 +1093,14 @@ def escm2wc(
         help="Win loss weight",
     ),
     ctr_weight: float = typer.Option(
-        1.0,
+        0.1,
         "--ctr-weight",
-        help="CTR loss weight",
+        help="CTR loss weight λ_c (ESCM² range [0, 0.1]; Wang et al. 2022)",
     ),
     joint_weight: float = typer.Option(
         1.0,
         "--joint-weight",
-        help="Joint loss weight",
+        help="Joint loss weight (1.0 per Wang et al. 2022)",
     ),
     impute_loss_weight: float = typer.Option(
         0.5,
@@ -1129,6 +1153,11 @@ def escm2wc(
         0.0,
         "--gradient-clip",
         help="Gradient clipping norm (0 = disabled)",
+    ),
+    weight_decay: float = typer.Option(
+        1e-5,
+        "--weight-decay",
+        help="AdamW weight decay coefficient (0 = vanilla Adam)",
     ),
     max_samples: Optional[int] = typer.Option(
         None,
@@ -1187,6 +1216,7 @@ def escm2wc(
         scheduler=scheduler,
         warmup_steps=warmup_steps,
         gradient_clip=gradient_clip,
+        weight_decay=weight_decay,
         max_samples=max_samples,
         eval_every_n_epochs=eval_every,
         use_wandb=use_wandb,
@@ -1222,6 +1252,7 @@ def _train_wc_model(
     scheduler: str = "constant",
     warmup_steps: int = 0,
     gradient_clip: float = 0.0,
+    weight_decay: float = 1e-5,
     max_samples: Optional[int] = None,
     use_wandb: bool = False,
     wandb_project: str = "rtb-ipinyou",
@@ -1378,6 +1409,9 @@ def _train_wc_model(
                 hidden_dims=hidden_dims_list,
                 win_hidden_dims=win_hidden_dims_list,
                 dropout=dropout,
+                win_weight=win_weight,
+                ctr_weight=ctr_weight,
+                joint_weight=joint_weight,
             )
         typer.echo("\nInitializing ESMM-WC model...")
         rngs = nnx.Rngs(0)
@@ -1437,15 +1471,21 @@ def _train_wc_model(
 
     # Optimizer
     start_epoch = 0
-    if distributed and (scheduler != "constant" or warmup_steps > 0 or gradient_clip > 0):
-        n_samples = len(train_source)
-        total_steps = epochs * (n_samples // global_batch_size)
+    n_samples = len(train_source)
+    total_steps = epochs * (n_samples // global_batch_size)
+    _use_advanced_optim = (
+        scheduler != "constant"
+        or warmup_steps > 0
+        or gradient_clip > 0
+        or weight_decay > 0
+    )
+    if _use_advanced_optim:
         tx = create_optimizer(
             base_lr=learning_rate,
             warmup_steps=warmup_steps,
             total_steps=total_steps,
             num_devices=mesh.size if mesh else 1,
-            weight_decay=1e-5,
+            weight_decay=weight_decay,
             gradient_clip=gradient_clip,
             scheduler=scheduler,
         )
@@ -1462,6 +1502,8 @@ def _train_wc_model(
         typer.echo(f"  Resumed at epoch {start_epoch}, best_val_loss={best_val_loss:.4f}")
     else:
         best_val_loss = float("inf")
+
+    best_state = None  # Will store nnx.State of best model
 
     # Checkpoint config
     checkpoint_enabled = distributed  # Only auto-checkpoint in distributed mode
@@ -1489,19 +1531,20 @@ def _train_wc_model(
                 "scheduler": scheduler,
                 "warmup_steps": warmup_steps,
                 "gradient_clip": gradient_clip,
+                "weight_decay": weight_decay,
                 "distributed": distributed,
                 "num_devices": mesh.size if mesh else 1,
                 "train_samples": len(train_source),
                 "val_samples": len(val_source),
+                "win_weight": win_weight,
+                "ctr_weight": ctr_weight,
+                "joint_weight": joint_weight,
             }
             if model_type == "escm2wc":
                 wandb_config.update({
                     "cfr_lambda": cfr_lambda,
                     "win_eps": win_eps,
                     "max_weight": max_weight,
-                    "win_weight": win_weight,
-                    "ctr_weight": ctr_weight,
-                    "joint_weight": joint_weight,
                     "impute_loss_weight": impute_loss_weight,
                 })
             wandb_run = wandb.init(
@@ -1527,7 +1570,7 @@ def _train_wc_model(
 
     # LR schedule function (for display only)
     lr_schedule_fn = None
-    if distributed and (scheduler != "constant" or warmup_steps > 0):
+    if scheduler != "constant" or warmup_steps > 0:
         from src.distributed.train_state import create_lr_schedule
         lr_schedule_fn = create_lr_schedule(
             base_lr=learning_rate,
@@ -1598,7 +1641,7 @@ def _train_wc_model(
             val_batches = 0
             for raw_batch in val_loader:
                 vbatch = batch_to_jax(raw_batch, data_sharding)
-                vl, v_comp = loss_fn_with_components(model, vbatch)
+                vl, v_comp = loss_fn_with_components(model, vbatch, training=False)
                 val_comp_accum = _accumulate_components(val_comp_accum, v_comp)
                 val_batches += 1
             avg_val = _average_components(val_comp_accum, val_batches)
@@ -1609,6 +1652,7 @@ def _train_wc_model(
                 best_val_loss = val_loss
                 best_epoch = epoch + 1
                 patience = 0
+                _, best_state = nnx.split(model)
             else:
                 patience += 1
 
@@ -1692,6 +1736,11 @@ def _train_wc_model(
 
     training_time = time.time() - start_time
     typer.echo(f"\nTraining time: {training_time:.1f}s")
+
+    # Restore best model before evaluation
+    if best_state is not None:
+        typer.echo(f"  Restoring best model from epoch {best_epoch}")
+        nnx.update(model, best_state)
 
     # Evaluation using grain DataLoader
     typer.echo("\nEvaluating...")

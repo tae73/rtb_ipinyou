@@ -182,8 +182,8 @@ def create_esmm_wc_loss_fn(
             ConcretizationTypeError inside JIT).
     """
 
-    def loss_fn(model: ESMMWC, batch: dict):
-        output = model(batch["x"], training=True)
+    def loss_fn(model: ESMMWC, batch: dict, training: bool = True):
+        output = model(batch["x"], training=training)
 
         # Win loss (all bids)
         win_loss = jnp.mean(

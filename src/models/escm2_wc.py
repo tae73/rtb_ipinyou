@@ -225,8 +225,8 @@ def create_escm2wc_loss_fn(
             ConcretizationTypeError inside JIT).
     """
 
-    def loss_fn(model: ESCM2WC, batch: dict):
-        output = model(batch["x"], training=True)
+    def loss_fn(model: ESCM2WC, batch: dict, training: bool = True):
+        output = model(batch["x"], training=training)
 
         # --- Win loss (all bids) ---
         win_loss = jnp.mean(
