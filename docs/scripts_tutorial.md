@@ -336,11 +336,28 @@ python scripts/train.py esmmwc \
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--epochs` | Training epochs | 50 |
-| `--batch-size` | Batch size | 4096 |
+| `--batch-size`, `-b` | Batch size | 4096 |
+| `--learning-rate`, `-lr` | Learning rate | 0.001 |
 | `--embedding-dim` | Embedding dimension | 16 |
 | `--hidden-dims` | CTR tower MLP dimensions | 128,64 |
 | `--win-hidden-dims` | Win tower MLP dimensions | 64,32 |
+| `--dropout` | Dropout rate | 0.3 |
+| `--win-weight` | Win loss weight | 1.0 |
+| `--ctr-weight` | CTR loss weight (0.0 per Ma et al. 2018 — no direct supervision) | 0.0 |
+| `--joint-weight` | Joint (ESMM) loss weight | 1.0 |
+| `--weight-decay` | AdamW weight decay (0 = vanilla Adam) | 1e-5 |
+| `--scheduler` | LR scheduler: constant, cosine, linear | constant |
+| `--warmup-steps` | LR warmup steps | 0 |
+| `--gradient-clip` | Gradient clipping norm (0 = disabled) | 0.0 |
+| `--eval-every` | Val AUC/ECE/IEB metrics every N epochs | 5 |
 | `--max-samples` | Limit training samples (for smoke testing) | None (all) |
+| `--quiet`, `-q` | Suppress progress output | False |
+| `--distributed` | Enable distributed SPMD training | False |
+| `--num-devices` | Number of devices (None = auto-detect) | None |
+| `--resume-from` | Checkpoint path to resume from | None |
+| `--use-wandb` | Enable W&B logging | False |
+| `--wandb-project` | W&B project name | rtb-ipinyou |
+| `--wandb-run-name` | W&B run name (auto-generated if None) | None |
 | `--config-dir` | Hydra config directory (e.g., `configs`) | None |
 | `--overrides` / `-O` | Hydra overrides, comma-separated | None |
 
@@ -356,13 +373,34 @@ python scripts/train.py escm2wc \
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--debiasing` | 'ipw' or 'dr' | dr |
+| `--debiasing` | Debiasing method: ipw or dr | dr |
 | `--epochs` | Training epochs | 50 |
-| `--batch-size` | Batch size | 4096 |
+| `--batch-size`, `-b` | Batch size | 4096 |
+| `--learning-rate`, `-lr` | Learning rate | 0.001 |
 | `--embedding-dim` | Embedding dimension | 16 |
 | `--hidden-dims` | CTR tower MLP dimensions | 128,64 |
 | `--win-hidden-dims` | Win tower MLP dimensions | 64,32 |
+| `--dropout` | Dropout rate | 0.3 |
+| `--cfr-lambda` | CFR regularization weight | 0.1 |
+| `--win-eps` | Win propensity clipping floor | 0.05 |
+| `--max-weight` | IPW/DR weight clipping ceiling | 10.0 |
+| `--win-weight` | Win loss weight | 1.0 |
+| `--ctr-weight` | CTR loss weight λ_c (ESCM² range [0, 0.1]) | 0.1 |
+| `--joint-weight` | Joint loss weight | 1.0 |
+| `--impute-loss-weight` | Imputation loss weight (DR) | 0.5 |
+| `--weight-decay` | AdamW weight decay (0 = vanilla Adam) | 1e-5 |
+| `--scheduler` | LR scheduler: constant, cosine, linear | constant |
+| `--warmup-steps` | LR warmup steps | 0 |
+| `--gradient-clip` | Gradient clipping norm (0 = disabled) | 0.0 |
+| `--eval-every` | Val AUC/ECE/IEB metrics every N epochs | 5 |
 | `--max-samples` | Limit training samples (for smoke testing) | None (all) |
+| `--quiet`, `-q` | Suppress progress output | False |
+| `--distributed` | Enable distributed SPMD training | False |
+| `--num-devices` | Number of devices (None = auto-detect) | None |
+| `--resume-from` | Checkpoint path to resume from | None |
+| `--use-wandb` | Enable W&B logging | False |
+| `--wandb-project` | W&B project name | rtb-ipinyou |
+| `--wandb-run-name` | W&B run name (auto-generated if None) | None |
 | `--config-dir` | Hydra config directory (e.g., `configs`) | None |
 | `--overrides` / `-O` | Hydra overrides, comma-separated | None |
 
