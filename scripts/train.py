@@ -966,6 +966,26 @@ def esmmwc(
         "--wandb-run-name",
         help="W&B run name (auto-generated if None)",
     ),
+    es_metric: str = typer.Option(
+        "joint",
+        "--es-metric",
+        help="Early stopping metric: 'total', 'joint', or 'ctr_auc' (requires eval_every=1)",
+    ),
+    patience: int = typer.Option(
+        10,
+        "--patience",
+        help="Early stopping patience (epochs without improvement)",
+    ),
+    use_layer_norm: bool = typer.Option(
+        False,
+        "--use-layer-norm/--no-use-layer-norm",
+        help="Use LayerNorm in MLP towers",
+    ),
+    use_numeric_bypass: bool = typer.Option(
+        False,
+        "--use-numeric-bypass/--no-use-numeric-bypass",
+        help="Pass raw normalized numerical features to MLP (skip embedding projection)",
+    ),
 ) -> None:
     """Train ESMM-WC model (Bid->Win->Click, 2-tower).
 
@@ -1008,6 +1028,10 @@ def esmmwc(
         win_weight=win_weight,
         ctr_weight=ctr_weight,
         joint_weight=joint_weight,
+        es_metric=es_metric,
+        patience=patience,
+        use_layer_norm=use_layer_norm,
+        use_numeric_bypass=use_numeric_bypass,
     )
 
 
@@ -1184,6 +1208,26 @@ def escm2wc(
         "--wandb-run-name",
         help="W&B run name (auto-generated if None)",
     ),
+    es_metric: str = typer.Option(
+        "joint",
+        "--es-metric",
+        help="Early stopping metric: 'total', 'joint', or 'ctr_auc' (requires eval_every=1)",
+    ),
+    patience: int = typer.Option(
+        10,
+        "--patience",
+        help="Early stopping patience (epochs without improvement)",
+    ),
+    use_layer_norm: bool = typer.Option(
+        False,
+        "--use-layer-norm/--no-use-layer-norm",
+        help="Use LayerNorm in MLP towers",
+    ),
+    use_numeric_bypass: bool = typer.Option(
+        False,
+        "--use-numeric-bypass/--no-use-numeric-bypass",
+        help="Pass raw normalized numerical features to MLP (skip embedding projection)",
+    ),
 ) -> None:
     """Train ESCM2-WC model (Bid->Win->Click, 3-tower with DR/IPW).
 
@@ -1230,6 +1274,10 @@ def escm2wc(
         ctr_weight=ctr_weight,
         joint_weight=joint_weight,
         impute_loss_weight=impute_loss_weight,
+        es_metric=es_metric,
+        patience=patience,
+        use_layer_norm=use_layer_norm,
+        use_numeric_bypass=use_numeric_bypass,
     )
 
 
@@ -1270,6 +1318,12 @@ def _train_wc_model(
     eval_every_n_epochs: int = 1,
     # W&B sweep support
     wandb_run: Optional[object] = None,
+    # Early stopping
+    es_metric: str = "joint",
+    patience: int = 10,
+    # Architecture
+    use_layer_norm: bool = False,
+    use_numeric_bypass: bool = False,
 ) -> None:
     """Shared training logic for ESMM-WC and ESCM2-WC.
 
@@ -1338,6 +1392,11 @@ def _train_wc_model(
     typer.echo(f"  Epochs: {epochs}")
     typer.echo(f"  Batch size: {batch_size}")
     typer.echo(f"  Learning rate: {learning_rate}")
+    typer.echo(f"  Early stopping: metric={es_metric}, patience={patience}")
+    if use_layer_norm:
+        typer.echo(f"  LayerNorm: enabled")
+    if use_numeric_bypass:
+        typer.echo(f"  Numeric bypass: enabled")
     if distributed:
         typer.echo(f"  Distributed: True (devices={num_devices or 'auto'})")
         typer.echo(f"  Scheduler: {scheduler}, warmup: {warmup_steps}, clip: {gradient_clip}")
@@ -1412,6 +1471,8 @@ def _train_wc_model(
                 win_weight=win_weight,
                 ctr_weight=ctr_weight,
                 joint_weight=joint_weight,
+                use_layer_norm=use_layer_norm,
+                use_numeric_bypass=use_numeric_bypass,
             )
         typer.echo("\nInitializing ESMM-WC model...")
         rngs = nnx.Rngs(0)
@@ -1447,6 +1508,8 @@ def _train_wc_model(
                 ctr_weight=ctr_weight,
                 joint_weight=joint_weight,
                 impute_loss_weight=impute_loss_weight,
+                use_layer_norm=use_layer_norm,
+                use_numeric_bypass=use_numeric_bypass,
             )
         typer.echo(f"\nInitializing ESCM2-WC({debiasing}) model...")
         rngs = nnx.Rngs(0)
@@ -1539,6 +1602,10 @@ def _train_wc_model(
                 "win_weight": win_weight,
                 "ctr_weight": ctr_weight,
                 "joint_weight": joint_weight,
+                "es_metric": es_metric,
+                "patience": max_patience,
+                "use_layer_norm": use_layer_norm,
+                "use_numeric_bypass": use_numeric_bypass,
             }
             if model_type == "escm2wc":
                 wandb_config.update({
@@ -1584,8 +1651,8 @@ def _train_wc_model(
     typer.echo("\nTraining...")
     start_time = time.time()
 
-    patience = 0
-    max_patience = 10
+    es_patience_counter = 0
+    max_patience = patience
     best_epoch = start_epoch
     global_step = start_epoch * (len(train_source) // global_batch_size)
     training_history = []
@@ -1646,16 +1713,6 @@ def _train_wc_model(
                 val_batches += 1
             avg_val = _average_components(val_comp_accum, val_batches)
 
-            # --- Early stopping ---
-            val_loss = avg_val["total"]
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                best_epoch = epoch + 1
-                patience = 0
-                _, best_state = nnx.split(model)
-            else:
-                patience += 1
-
             # --- LR tracking ---
             current_lr = (
                 float(lr_schedule_fn(global_step))
@@ -1665,11 +1722,14 @@ def _train_wc_model(
 
             epoch_time = time.time() - epoch_start
 
-            # --- Full val metrics (every N epochs + first/last/early-stop) ---
+            # --- Full val metrics (every N epochs + first/last/near-stop) ---
+            # For ctr_auc early stopping, we need metrics every epoch
+            _force_eval = es_metric == "ctr_auc"
             is_eval_epoch = (
-                (epoch + 1) % eval_every_n_epochs == 0
+                _force_eval
+                or (epoch + 1) % eval_every_n_epochs == 0
                 or epoch == start_epoch
-                or patience >= max_patience
+                or es_patience_counter >= max_patience
                 or epoch == epochs - 1
             )
             val_metrics = (
@@ -1681,6 +1741,21 @@ def _train_wc_model(
                 if is_eval_epoch
                 else {}
             )
+
+            # --- Early stopping ---
+            if es_metric == "joint":
+                val_loss = avg_val["joint"]
+            elif es_metric == "ctr_auc":
+                val_loss = -val_metrics.get("ctr_auc", 0.0)  # higher = better → negate
+            else:
+                val_loss = avg_val["total"]
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                best_epoch = epoch + 1
+                es_patience_counter = 0
+                _, best_state = nnx.split(model)
+            else:
+                es_patience_counter += 1
 
             # --- Training history record ---
             training_history.append({
@@ -1708,7 +1783,7 @@ def _train_wc_model(
                     epoch_time=epoch_time,
                     lr=current_lr,
                     model_type=model_type,
-                    patience=patience,
+                    patience=es_patience_counter,
                     max_patience=max_patience,
                     best_val_loss=best_val_loss,
                     best_epoch=best_epoch,
@@ -1730,8 +1805,8 @@ def _train_wc_model(
                 if not quiet:
                     typer.echo(f"  Checkpoint saved: {ckpt_path}")
 
-            if patience >= max_patience:
-                typer.echo(f"  Early stopping at epoch {epoch + 1}")
+            if es_patience_counter >= max_patience:
+                typer.echo(f"  Early stopping at epoch {epoch + 1} (metric={es_metric})")
                 break
 
     training_time = time.time() - start_time
@@ -1813,6 +1888,25 @@ def _train_wc_model(
             "win_hidden_dims": list(win_hidden_dims_list),
             "n_cat_features": len(cat_features),
             "n_num_features": len(num_features),
+            "dropout": dropout,
+            "batch_size": global_batch_size,
+            "learning_rate": learning_rate,
+            "weight_decay": weight_decay,
+            "scheduler": scheduler,
+            "warmup_steps": warmup_steps,
+            "gradient_clip": gradient_clip,
+            "win_weight": win_weight,
+            "ctr_weight": ctr_weight,
+            "joint_weight": joint_weight,
+            "es_metric": es_metric,
+            "patience": max_patience,
+            "use_layer_norm": use_layer_norm,
+            "use_numeric_bypass": use_numeric_bypass,
+            **({"cfr_lambda": cfr_lambda,
+                "win_eps": win_eps,
+                "max_weight": max_weight,
+                "impute_loss_weight": impute_loss_weight,
+                } if model_type == "escm2wc" else {}),
         },
         "training_time": training_time,
         "epochs": epochs,

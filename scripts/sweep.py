@@ -173,6 +173,7 @@ def agent(
             eval_every_n_epochs=config.get("eval_every", 1),
             wandb_run=run,
             use_wandb=True,
+            use_numeric_bypass=config.get("use_numeric_bypass", False),
         )
 
         # ESCM2-WC specific debiasing hyperparameters

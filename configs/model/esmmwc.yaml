@@ -12,4 +12,5 @@ win_weight: 1.0
 ctr_weight: 1.0
 joint_weight: 1.0
 use_fm_interaction: true
-use_layer_norm: false
+use_layer_norm: true
+use_numeric_bypass: false

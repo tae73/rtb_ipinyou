@@ -147,6 +147,7 @@ class EmbeddingLayer(nnx.Module):
         feature_dims: Dict[str, int],
         embed_dim: int,
         multi_hot_features: Optional[List[str]] = None,
+        use_numeric_bypass: bool = False,
         *,
         rngs: nnx.Rngs,
     ):
@@ -157,11 +158,14 @@ class EmbeddingLayer(nnx.Module):
                          Use vocab_size>1 for sparse/categorical features
             embed_dim: Embedding dimension for each feature
             multi_hot_features: List of features that are multi-hot encoded
+            use_numeric_bypass: If True, pass raw normalized numerical features
+                               directly (skip Linear(1, embed_dim) projection)
             rngs: Random number generators
         """
         self.sparse_features = []
         self.dense_features = []
         self.multi_hot_features = multi_hot_features or []
+        self.use_numeric_bypass = use_numeric_bypass
 
         embeddings = {}
         dense_projections = {}
@@ -176,13 +180,14 @@ class EmbeddingLayer(nnx.Module):
                     rngs=rngs,
                 )
             else:
-                # Dense feature (vocab_size <= 1 or -1): use linear projection
+                # Dense feature (vocab_size <= 1 or -1)
                 self.dense_features.append(name)
-                dense_projections[name] = nnx.Linear(
-                    in_features=1,
-                    out_features=embed_dim,
-                    rngs=rngs,
-                )
+                if not use_numeric_bypass:
+                    dense_projections[name] = nnx.Linear(
+                        in_features=1,
+                        out_features=embed_dim,
+                        rngs=rngs,
+                    )
 
         # Use nnx.Dict for module containers (Flax 0.12.0+)
         self.embeddings = nnx.Dict(embeddings)
@@ -224,12 +229,14 @@ class EmbeddingLayer(nnx.Module):
                 safe_idx = jnp.clip(x[name], 0, max_idx)
                 outputs.append(self.embeddings[name](safe_idx))
 
-        # Process dense features (linear projection)
+        # Process dense features
         for name in self.dense_features:
             if name in x:
-                # Expand dims for linear layer: [batch,] -> [batch, 1]
                 dense_input = x[name][..., jnp.newaxis].astype(jnp.float32)
-                outputs.append(self.dense_projections[name](dense_input))
+                if self.use_numeric_bypass:
+                    outputs.append(dense_input)  # [batch, 1] raw scalar
+                else:
+                    outputs.append(self.dense_projections[name](dense_input))
 
         # Concatenate all outputs
         return jnp.concatenate(outputs, axis=-1)

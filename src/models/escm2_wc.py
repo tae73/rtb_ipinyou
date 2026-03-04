@@ -68,6 +68,7 @@ class ESCM2WCConfig(NamedTuple):
     # Architecture options
     use_fm_interaction: bool = True
     use_layer_norm: bool = False
+    use_numeric_bypass: bool = False
     multi_hot_features: Optional[Sequence[str]] = None
 
 
@@ -111,21 +112,33 @@ class ESCM2WC(nnx.Module):
             feature_dims=config.feature_dims,
             embed_dim=config.embed_dim,
             multi_hot_features=multi_hot,
+            use_numeric_bypass=config.use_numeric_bypass,
             rngs=rngs,
         )
 
-        # Optional FM interaction
+        # Count feature types for input_dim calculation
+        n_cat = sum(1 for v in config.feature_dims.values() if v > 1)
+        n_num = sum(1 for v in config.feature_dims.values() if v <= 1)
+        self._n_cat = n_cat
+
+        # Embedding output dim depends on bypass mode
+        if config.use_numeric_bypass:
+            embed_output_dim = n_cat * config.embed_dim + n_num
+        else:
+            embed_output_dim = len(config.feature_dims) * config.embed_dim
+
+        # Optional FM interaction (bypass: categorical embeddings only)
         self.use_fm_interaction = config.use_fm_interaction
         if config.use_fm_interaction:
             self.interaction = FeatureInteraction(
-                n_features=len(config.feature_dims),
+                n_features=n_cat if config.use_numeric_bypass else len(config.feature_dims),
                 embed_dim=config.embed_dim,
                 rngs=rngs,
             )
-            input_dim = len(config.feature_dims) * config.embed_dim + config.embed_dim
+            input_dim = embed_output_dim + config.embed_dim
         else:
             self.interaction = None
-            input_dim = len(config.feature_dims) * config.embed_dim
+            input_dim = embed_output_dim
 
         # Win Tower: P(Win|X, bid)
         self.win_tower = MLP(
@@ -167,12 +180,23 @@ class ESCM2WC(nnx.Module):
 
         # Optional FM interaction
         if self.use_fm_interaction and self.interaction is not None:
-            n_features = len(self.config.feature_dims)
-            embed_reshaped = embed.reshape(
-                *embed.shape[:-1], n_features, self.config.embed_dim
-            )
-            interaction_out = self.interaction(embed_reshaped)
-            embed = jnp.concatenate([embed, interaction_out], axis=-1)
+            if self.config.use_numeric_bypass:
+                # Split: cat embeddings | raw numerics
+                cat_dim = self._n_cat * self.config.embed_dim
+                cat_embed = embed[..., :cat_dim]
+                num_raw = embed[..., cat_dim:]
+                cat_reshaped = cat_embed.reshape(
+                    *cat_embed.shape[:-1], self._n_cat, self.config.embed_dim
+                )
+                interaction_out = self.interaction(cat_reshaped)
+                embed = jnp.concatenate([cat_embed, interaction_out, num_raw], axis=-1)
+            else:
+                n_features = len(self.config.feature_dims)
+                embed_reshaped = embed.reshape(
+                    *embed.shape[:-1], n_features, self.config.embed_dim
+                )
+                interaction_out = self.interaction(embed_reshaped)
+                embed = jnp.concatenate([embed, interaction_out], axis=-1)
 
         # Win prediction (propensity)
         win_logit = self.win_tower(embed, training=training)
