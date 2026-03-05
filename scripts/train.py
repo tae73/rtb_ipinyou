@@ -1430,6 +1430,16 @@ def _train_wc_model(
     typer.echo(f"  Val:   {len(val_df):,} samples (win={val_df['win'].sum():,.0f})")
     typer.echo(f"  Test:  {len(test_df):,} samples (win={test_df['win'].sum():,.0f})")
 
+    # Auto-encode string categorical columns to integer codes
+    for col in cat_features:
+        if train_df[col].dtype == "object" or train_df[col].dtype.name == "category":
+            all_cats = sorted(set(train_df[col].dropna().unique()))
+            cat_map = {v: i + 1 for i, v in enumerate(all_cats)}  # 0 reserved for unknown
+            train_df[col] = train_df[col].map(cat_map).fillna(0).astype("int32")
+            val_df[col] = val_df[col].map(cat_map).fillna(0).astype("int32")
+            test_df[col] = test_df[col].map(cat_map).fillna(0).astype("int32")
+            typer.echo(f"  Label-encoded '{col}': {len(cat_map)} categories")
+
     # Compute feature_dims: categorical → vocab size, numerical → -1 (dense)
     feature_dims = {}
     for col in cat_features:
