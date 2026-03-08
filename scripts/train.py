@@ -986,6 +986,16 @@ def esmmwc(
         "--use-numeric-bypass/--no-use-numeric-bypass",
         help="Pass raw normalized numerical features to MLP (skip embedding projection)",
     ),
+    use_scalar_input: bool = typer.Option(
+        False,
+        "--use-scalar-input/--no-use-scalar-input",
+        help="Treat ALL features (including categorical) as scalar floats (like LR)",
+    ),
+    exclude_features: Optional[str] = typer.Option(
+        None,
+        "--exclude-features",
+        help="Comma-separated feature names to exclude from training",
+    ),
 ) -> None:
     """Train ESMM-WC model (Bid->Win->Click, 2-tower).
 
@@ -1032,6 +1042,8 @@ def esmmwc(
         patience=patience,
         use_layer_norm=use_layer_norm,
         use_numeric_bypass=use_numeric_bypass,
+        use_scalar_input=use_scalar_input,
+        exclude_features=exclude_features,
     )
 
 
@@ -1228,6 +1240,16 @@ def escm2wc(
         "--use-numeric-bypass/--no-use-numeric-bypass",
         help="Pass raw normalized numerical features to MLP (skip embedding projection)",
     ),
+    use_scalar_input: bool = typer.Option(
+        False,
+        "--use-scalar-input/--no-use-scalar-input",
+        help="Treat ALL features (including categorical) as scalar floats (like LR)",
+    ),
+    exclude_features: Optional[str] = typer.Option(
+        None,
+        "--exclude-features",
+        help="Comma-separated feature names to exclude from training",
+    ),
 ) -> None:
     """Train ESCM2-WC model (Bid->Win->Click, 3-tower with DR/IPW).
 
@@ -1278,6 +1300,8 @@ def escm2wc(
         patience=patience,
         use_layer_norm=use_layer_norm,
         use_numeric_bypass=use_numeric_bypass,
+        use_scalar_input=use_scalar_input,
+        exclude_features=exclude_features,
     )
 
 
@@ -1324,6 +1348,8 @@ def _train_wc_model(
     # Architecture
     use_layer_norm: bool = False,
     use_numeric_bypass: bool = False,
+    use_scalar_input: bool = False,
+    exclude_features: Optional[str] = None,
 ) -> None:
     """Shared training logic for ESMM-WC and ESCM2-WC.
 
@@ -1397,6 +1423,10 @@ def _train_wc_model(
         typer.echo(f"  LayerNorm: enabled")
     if use_numeric_bypass:
         typer.echo(f"  Numeric bypass: enabled")
+    if use_scalar_input:
+        typer.echo(f"  Scalar input: enabled (all features as dense scalars)")
+    if exclude_features:
+        typer.echo(f"  Exclude features: {exclude_features}")
     if distributed:
         typer.echo(f"  Distributed: True (devices={num_devices or 'auto'})")
         typer.echo(f"  Scheduler: {scheduler}, warmup: {warmup_steps}, clip: {gradient_clip}")
@@ -1418,6 +1448,39 @@ def _train_wc_model(
     # Ensure bidprice is included (required for Win Tower)
     if "bidprice" not in num_features and "bidprice" in train_df.columns:
         num_features.append("bidprice")
+
+    # Exclude specified features
+    if exclude_features:
+        exclude_set = set(f.strip() for f in exclude_features.split(","))
+        n_cat_before, n_num_before = len(cat_features), len(num_features)
+        cat_features = [c for c in cat_features if c not in exclude_set]
+        num_features = [c for c in num_features if c not in exclude_set]
+        excluded_cat = n_cat_before - len(cat_features)
+        excluded_num = n_num_before - len(num_features)
+        typer.echo(f"\n  Excluded features: {exclude_set}")
+        typer.echo(f"  Removed {excluded_cat} cat + {excluded_num} num features")
+
+    # Scalar input mode: treat ALL features as dense scalars (like LR)
+    if use_scalar_input:
+        typer.echo(f"\n  Scalar input mode: converting {len(cat_features)} categorical → dense scalars")
+        # Compute z-score stats for categorical features (treating them as ordinal scalars)
+        for col in cat_features:
+            train_df[col] = train_df[col].astype("float32")
+            val_df[col] = val_df[col].astype("float32")
+            test_df[col] = test_df[col].astype("float32")
+            # Add normalization stats for categorical-as-scalar
+            col_mean = float(train_df[col].mean())
+            col_std = float(train_df[col].std())
+            if col_std < 1e-8:
+                col_std = 1.0
+            norm_mean[col] = col_mean
+            norm_std[col] = col_std
+        # Move all categorical to numerical (all treated as dense)
+        num_features = cat_features + num_features
+        cat_features = []
+        # Force numeric bypass so raw scalars pass through (no Linear(1, embed_dim))
+        use_numeric_bypass = True
+        typer.echo(f"  Total scalar features: {len(num_features)}")
 
     typer.echo(f"\nFeatures:")
     typer.echo(f"  Categorical: {len(cat_features)}")
@@ -1483,6 +1546,7 @@ def _train_wc_model(
                 joint_weight=joint_weight,
                 use_layer_norm=use_layer_norm,
                 use_numeric_bypass=use_numeric_bypass,
+                use_fm_interaction=not use_scalar_input,
             )
         typer.echo("\nInitializing ESMM-WC model...")
         rngs = nnx.Rngs(0)
@@ -1520,6 +1584,7 @@ def _train_wc_model(
                 impute_loss_weight=impute_loss_weight,
                 use_layer_norm=use_layer_norm,
                 use_numeric_bypass=use_numeric_bypass,
+                use_fm_interaction=not use_scalar_input,
             )
         typer.echo(f"\nInitializing ESCM2-WC({debiasing}) model...")
         rngs = nnx.Rngs(0)
@@ -1616,6 +1681,8 @@ def _train_wc_model(
                 "patience": max_patience,
                 "use_layer_norm": use_layer_norm,
                 "use_numeric_bypass": use_numeric_bypass,
+                "use_scalar_input": use_scalar_input,
+                "exclude_features": exclude_features,
             }
             if model_type == "escm2wc":
                 wandb_config.update({
@@ -1912,6 +1979,8 @@ def _train_wc_model(
             "patience": max_patience,
             "use_layer_norm": use_layer_norm,
             "use_numeric_bypass": use_numeric_bypass,
+            "use_scalar_input": use_scalar_input,
+            "exclude_features": exclude_features,
             **({"cfr_lambda": cfr_lambda,
                 "win_eps": win_eps,
                 "max_weight": max_weight,
