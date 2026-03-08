@@ -1,12 +1,12 @@
 # Neural Model Performance Tuning Log
 
-**Last Updated**: 2026-03-04
+**Last Updated**: 2026-03-08
 
 ## 1. Problem Statement
 
-LR CTR_all baseline achieves **Test AUC 0.7828** on iPinYou RTB data using 30 raw StandardScaler float32 features.
-Neural models (ESMM-WC / ESCM2-WC) initially underperformed due to architectural choices that
-destroyed ordinal/magnitude information in numerical features.
+LR CTR_all baseline achieves **Test AUC 0.7687** on iPinYou all-bids CTR prediction.
+Neural models (ESMM-WC / ESCM2-WC) initially underperformed but subsequent tuning
+closed the gap significantly vs LGB baselines.
 
 **Goal**: Close the gap between LR baseline and neural multi-task models while preserving
 the debiasing benefits of ESMM/ESCM2 architecture.
@@ -15,36 +15,70 @@ the debiasing benefits of ESMM/ESCM2 architecture.
 
 ## 2. Baseline Comparison
 
-| Model | Test CTR AUC | Test WCTR AUC | Notes |
-|-------|-------------|--------------|-------|
-| LGB CTR (biased) | 0.7446 | -- | Winners-only CTR, overfits to win distribution |
-| LGB Win PS | AUC ~0.91 | -- | Win propensity model, positivity overlap ~48% |
-| LGB CTR_all | 0.7695 | -- | All-bids CTR, less biased but LGB memorizes |
-| **LR CTR_all (biased)** | **0.7828** | -- | 30 features, raw StandardScaler, temporal-robust |
-| ESMM-WC Run J (best) | 0.6237 | 0.6905 | 2-tower, ESMM constraint |
+### 2.1 공정 비교 원칙
 
-**Gap**: LR 0.7828 vs ESMM-WC 0.6237 = **0.1591** (20% relative degradation)
+Baseline과 ESMM-WC의 비교는 **동일한 train set + test set** 기준으로 수행해야 한다.
 
-**왜 LR CTR_all이 best baseline인가?**
-- LR은 30개 numerical features를 raw StandardScaler float32로 직접 사용 → 시간적 변화에 강건
-- LGB는 tree split으로 training distribution을 memorize → S2→S3 temporal shift에 취약
-- LR의 top features (bidprice, domain_freq, slot_size 등)는 numerical features이며,
-  이들의 ordinal/magnitude 정보가 CTR 예측에 핵심적 역할
+- **Winners-only CTR**: train=winners, test=winners → P(Click|Win=1, X)
+- **All-bids CTR**: train=all bids, test=all bids → P(Click_bid|X)
+- **Win prediction**: train=all bids, test=all bids → P(Win|X)
+
+ESMM-WC의 `test_ctr_biased_auc`는 all bids로 학습하되 winners-only에서 평가하므로,
+winners-only로 학습한 LGB CTR과는 **학습 조건이 다름**에 유의.
+
+### 2.2 결과 (실제 result JSON 기준)
+
+**Winners-only CTR evaluation:**
+
+| Model | Train Set | Train AUC | Val AUC | Test AUC |
+|-------|-----------|-----------|---------|----------|
+| LGB CTR | winners | 0.8113 | 0.7089 | **0.6890** |
+| **ESMM-WC Run J** | **all bids** | -- | ~0.70 | **0.6237** |
+| LR CTR | winners | 0.6333 | 0.6281 | 0.3216 |
+
+**All-bids CTR evaluation (P(click|bid)):**
+
+| Model | Train Set | Train AUC | Val AUC | Test AUC |
+|-------|-----------|-----------|---------|----------|
+| **LR CTR_all** | all bids | 0.7731 | 0.6805 | **0.7687** |
+| **ESMM-WC WCTR** | all bids | -- | -- | **0.6905** |
+| LGB CTR_all | all bids | 0.9059 | 0.7598 | 0.5437 |
+
+**Win prediction:**
+
+| Model | Train AUC | Val AUC | Test AUC |
+|-------|-----------|---------|----------|
+| LGB Win | 0.9308 | 0.8553 | 0.6493 |
+| ESMM-WC Win | -- | ~0.82 | 0.6432 |
+| LR Win | 0.8240 | 0.7534 | 0.5889 |
+
+### 2.3 분석
+
+**ESMM-WC는 LGB를 이미 유의미하게 능가한다:**
+- All-bids CTR: ESMM-WC 0.6905 >> LGB CTR_all 0.5437 (+0.147)
+- Winners-only CTR: ESMM-WC 0.6237 vs LGB CTR 0.6890 (gap 0.065, 학습조건 다름 감안)
+- Win prediction: ESMM-WC 0.6432 ≈ LGB Win 0.6493
+
+**LR CTR_all(0.7687)만이 ESMM-WC를 유의미하게 앞선다:**
+- Gap: LR 0.7687 vs ESMM-WC WCTR 0.6905 = 0.078 (동일 조건: all bids 학습+평가)
+- 단, LR CTR_all의 all-bids 평가는 non-won bids (click 불가능한 "easy negatives")를
+  대량 포함하여 AUC가 부풀려지는 효과가 있음
+- LR의 temporal robustness는 linear model의 낮은 complexity에서 기인
 
 ---
 
 ## 3. Root Cause Analysis
 
-### 3.1 Numerical Feature Embedding Bottleneck
+### 3.1 Remaining Gap: LR CTR_all vs ESMM-WC
 
-The 13 numerical features (bidprice, domain_freq, creative_freq, hour, weekday, etc.) are
-transformed by `Linear(1, 32)` projection per feature in `EmbeddingLayer`. This:
+ESMM-WC(0.6905)가 LR CTR_all(0.7687)에 미치지 못하는 원인:
 
-1. **Destroys ordinal relationships**: A linear projection maps scalar -> 32-dim vector,
-   losing the natural ordering (e.g., bidprice=50 vs bidprice=100)
-2. **Wastes parameters**: 13 features x (1x32 + 32 bias) = 832 parameters for what
-   LR handles with 13 direct coefficients
-3. **Inflates MLP input**: 13x32=416 dims from numericals alone vs 13 raw scalars
+1. **Nonlinear model의 temporal shift 취약성**: MLP의 nonlinear mapping이 S2 distribution을
+   memorize → S3에서 일반화 실패. LR은 linear coefficients만 사용하여 robust.
+2. **Multi-task learning overhead**: Win + CTR 동시 학습으로 CTR-specific optimization이 diluted.
+   win_weight=0.01로 완화했으나 완전 제거는 불가.
+3. **Easy negatives 효과**: LR CTR_all의 all-bids 평가에서 non-won bids(click=0 guaranteed)가
+   AUC를 부풀림. ESMM-WC WCTR도 동일 조건이지만, P(win)×P(click|win) product의 noise가 더 큼.
 
 ### 3.2 Feature Dimension Analysis
 
@@ -148,14 +182,16 @@ Neural model도 동일하게 numeric bypass로 raw scalar 정보를 보존하면
 
 ### 전체 진행 요약
 
-| Phase | 가설 | 핵심 변경 | Best Run | Test CTR AUC | 결과 |
-|-------|------|----------|----------|-------------|------|
-| 1 | Vanilla ESMM-WC로 LR 수준 가능? | 없음 (vanilla) | A | 0.5173 | Near-random, gradient starvation |
-| 2 | Regularization + scheduler로 0.65+ | batch→65536, cosine, LayerNorm | F | 0.5226 | +0.005, win-weight 핵심 변수 발견 |
-| 3 | Win-weight 극소화로 CTR 독립 학습 | ww=0.01 (win gradient 억제) | G | 0.5888 | +0.0662 (breakthrough) |
-| 4 | LR 감소로 peak epoch 우측 이동 | lr→5e-4 | J | 0.6237 | +0.0349 (best) |
-| 5 | Regularization 강화로 plateau 유지 | dropout↑, wd↑ | M/N/O | 0.5094-0.5478 | 역효과 (distribution shift) |
-| 6 | Numeric bypass로 LR-NN gap 축소 | 아키텍처 변경 (raw scalar) | P/Q | (대기) | 구현 완료, 실험 대기 |
+Baseline 비교 기준: LGB CTR 0.6890 (winners-only), LGB CTR_all 0.5437 (all-bids), LR CTR_all 0.7687 (all-bids)
+
+| Phase | 가설 | 핵심 변경 | Best Run | Test CTR AUC | Test WCTR AUC | 결과 |
+|-------|------|----------|----------|-------------|--------------|------|
+| 1 | Vanilla ESMM-WC | 없음 (vanilla) | A | 0.5173 | 0.5995 | Near-random, gradient starvation |
+| 2 | Regularization + scheduler | batch→65536, cosine, LayerNorm | F | 0.5226 | 0.6005 | win-weight 핵심 변수 발견 |
+| 3 | Win-weight 극소화 | ww=0.01 (win gradient 억제) | G | 0.5888 | 0.6426 | +0.0662 (breakthrough), LGB CTR_all 돌파 |
+| 4 | LR 감소로 수렴 조절 | lr→5e-4 | **J** | **0.6237** | **0.6905** | +0.0349, **LGB CTR_all(0.54) 대비 +0.15** |
+| 5 | Regularization 강화 | dropout↑, wd↑ | M/N/O | 0.5094-0.5478 | -- | 역효과 (distribution shift) |
+| 6 | Numeric bypass | 아키텍처 변경 (raw scalar) | P/Q | (대기) | -- | 구현 완료, 실험 대기 |
 
 ---
 
@@ -264,12 +300,15 @@ The fundamental bottleneck is **S2->S3 temporal shift**:
 - Test: Season 3 (2013-10)
 - ~4 months gap with different campaign mixes, user behaviors, market conditions
 
-LR is more robust because:
-1. Raw features preserve temporal/contextual signals directly
-2. Linear model has fewer parameters to overfit
-3. No embedding lookup tables that memorize training distribution
+모든 모델이 temporal shift의 영향을 받지만, 정도가 다름:
+- **LGB**: Train→Test AUC drop 최대 (CTR: 0.81→0.69, Win: 0.93→0.65, CTR_all: 0.91→0.54)
+- **ESMM-WC**: Val→Test gap 존재하나 LGB보다 양호 (CTR_all: ESMM-WC 0.69 >> LGB 0.54)
+- **LR**: Temporal shift에 가장 robust (CTR_all: 0.77→0.77, 거의 무하락)
 
-Neural models must bridge this gap through:
-- Numeric bypass (preserve raw feature information)
-- Feature engineering for temporal robustness
-- Domain adaptation techniques (future work)
+LR이 robust한 이유:
+1. Linear model은 파라미터가 적어 distribution memorization이 제한적
+2. Raw scalar features가 temporal context를 직접 전달
+3. Embedding lookup tables가 없어 category-specific overfitting 없음
+
+**결론**: ESMM-WC는 LGB 대비 temporal robustness에서 우위이나, LR의 linear simplicity를
+neural model로 재현하기 어려움. 연구 방향을 ESCM²-WC(DR) debiasing + Bid Optimization으로 전환.
