@@ -19,6 +19,14 @@ win_weight: 1.0
 ctr_weight: 1.0
 joint_weight: 1.0
 impute_loss_weight: 0.5
+impute_loss_type: mse  # 'mse' or 'huber'
+impute_huber_delta: 0.1  # Huber delta (only when impute_loss_type=huber)
 use_fm_interaction: true
 use_layer_norm: true
 use_numeric_bypass: false
+stop_grad_win_embedding: false
+impute_hidden_dims: null  # defaults to hidden_dims; e.g. [32, 16] for smaller tower
+# Per-tower dropout (null → use global dropout)
+win_dropout: null
+ctr_dropout: null
+impute_dropout: null

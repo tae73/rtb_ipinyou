@@ -388,6 +388,14 @@ python scripts/train.py escm2wc \
 | `--ctr-weight` | CTR loss weight λ_c (ESCM² range [0, 0.1]) | 0.1 |
 | `--joint-weight` | Joint loss weight | 1.0 |
 | `--impute-loss-weight` | Imputation loss weight (DR) | 0.5 |
+| `--dr-loss-type` | DR loss variant: 'mse' (paper) or 'bce' (pseudo-label) | mse |
+| `--stop-grad-win-embedding` | Stop gradient from win tower to shared embedding | False |
+| `--es-metric` | Early stopping metric: 'total', 'joint', or 'ctr_auc' | joint |
+| `--patience` | Early stopping patience (epochs without improvement) | 10 |
+| `--use-layer-norm` | Use LayerNorm in MLP towers | False |
+| `--use-numeric-bypass` | Pass raw numerical features to MLP (skip embed projection) | False |
+| `--use-scalar-input` | Treat ALL features as scalar floats (like LR) | False |
+| `--exclude-features` | Comma-separated feature names to exclude | None |
 | `--weight-decay` | AdamW weight decay (0 = vanilla Adam) | 1e-5 |
 | `--scheduler` | LR scheduler: constant, cosine, linear | constant |
 | `--warmup-steps` | LR warmup steps | 0 |

@@ -1250,6 +1250,51 @@ def escm2wc(
         "--exclude-features",
         help="Comma-separated feature names to exclude from training",
     ),
+    dr_loss_type: str = typer.Option(
+        "mse",
+        "--dr-loss-type",
+        help="DR loss variant: 'mse' (paper default) or 'bce' (pseudo-label)",
+    ),
+    stop_grad_win_embedding: bool = typer.Option(
+        False,
+        "--stop-grad-win-embedding/--no-stop-grad-win-embedding",
+        help="Stop gradient from win tower to shared embedding (gradient isolation)",
+    ),
+    impute_hidden_dims: Optional[str] = typer.Option(
+        None,
+        "--impute-hidden-dims",
+        help="Imputation tower hidden dims (comma-separated, e.g. '32,16'); defaults to --hidden-dims",
+    ),
+    impute_loss_type: str = typer.Option(
+        "mse",
+        "--impute-loss-type",
+        help="Imputation loss: 'mse' (default) or 'huber' (robust to outlier deltas)",
+    ),
+    impute_huber_delta: float = typer.Option(
+        0.1,
+        "--impute-huber-delta",
+        help="Huber loss delta (only used when --impute-loss-type=huber)",
+    ),
+    win_dropout: Optional[float] = typer.Option(
+        None,
+        "--win-dropout",
+        help="Win tower dropout (None → use global --dropout)",
+    ),
+    ctr_dropout: Optional[float] = typer.Option(
+        None,
+        "--ctr-dropout",
+        help="CTR tower dropout (None → use global --dropout)",
+    ),
+    impute_dropout: Optional[float] = typer.Option(
+        None,
+        "--impute-dropout",
+        help="Imputation tower dropout (None → use global --dropout)",
+    ),
+    top_k_avg: int = typer.Option(
+        1,
+        "--top-k-avg",
+        help="Average top-K checkpoints by val loss (1 = no averaging, best only)",
+    ),
 ) -> None:
     """Train ESCM2-WC model (Bid->Win->Click, 3-tower with DR/IPW).
 
@@ -1302,6 +1347,15 @@ def escm2wc(
         use_numeric_bypass=use_numeric_bypass,
         use_scalar_input=use_scalar_input,
         exclude_features=exclude_features,
+        dr_loss_type=dr_loss_type,
+        stop_grad_win_embedding=stop_grad_win_embedding,
+        impute_hidden_dims=impute_hidden_dims,
+        impute_loss_type=impute_loss_type,
+        impute_huber_delta=impute_huber_delta,
+        win_dropout=win_dropout,
+        ctr_dropout=ctr_dropout,
+        impute_dropout=impute_dropout,
+        top_k_avg=top_k_avg,
     )
 
 
@@ -1350,6 +1404,18 @@ def _train_wc_model(
     use_numeric_bypass: bool = False,
     use_scalar_input: bool = False,
     exclude_features: Optional[str] = None,
+    # ESCM2-WC specific architecture options
+    dr_loss_type: str = "mse",
+    stop_grad_win_embedding: bool = False,
+    impute_hidden_dims: Optional[str] = None,
+    impute_loss_type: str = "mse",
+    impute_huber_delta: float = 0.1,
+    # Per-tower dropout (ESCM2-WC only)
+    win_dropout: Optional[float] = None,
+    ctr_dropout: Optional[float] = None,
+    impute_dropout: Optional[float] = None,
+    # Checkpoint averaging
+    top_k_avg: int = 1,
 ) -> None:
     """Shared training logic for ESMM-WC and ESCM2-WC.
 
@@ -1406,6 +1472,10 @@ def _train_wc_model(
     # Parse hidden dims
     hidden_dims_list = tuple(int(d) for d in hidden_dims.split(","))
     win_hidden_dims_list = tuple(int(d) for d in win_hidden_dims.split(","))
+    impute_hidden_dims_list = (
+        tuple(int(d) for d in impute_hidden_dims.split(","))
+        if impute_hidden_dims is not None else None
+    )
 
     model_label = "ESMM-WC" if model_type == "esmmwc" else f"ESCM2-WC({debiasing})"
     typer.echo(f"\n{model_label} Configuration:")
@@ -1427,6 +1497,19 @@ def _train_wc_model(
         typer.echo(f"  Scalar input: enabled (all features as dense scalars)")
     if exclude_features:
         typer.echo(f"  Exclude features: {exclude_features}")
+    if model_type == "escm2wc":
+        if impute_hidden_dims_list is not None:
+            typer.echo(f"  Impute hidden dims: {impute_hidden_dims_list}")
+        if stop_grad_win_embedding:
+            typer.echo(f"  Stop grad win embedding: enabled")
+        if dr_loss_type != "mse":
+            typer.echo(f"  DR loss type: {dr_loss_type}")
+        if impute_loss_type != "mse":
+            typer.echo(f"  Impute loss type: {impute_loss_type} (delta={impute_huber_delta})")
+        if win_dropout is not None or ctr_dropout is not None or impute_dropout is not None:
+            typer.echo(f"  Per-tower dropout: win={win_dropout}, ctr={ctr_dropout}, impute={impute_dropout}")
+    if top_k_avg > 1:
+        typer.echo(f"  Checkpoint averaging: top-{top_k_avg}")
     if distributed:
         typer.echo(f"  Distributed: True (devices={num_devices or 'auto'})")
         typer.echo(f"  Scheduler: {scheduler}, warmup: {warmup_steps}, clip: {gradient_clip}")
@@ -1495,7 +1578,7 @@ def _train_wc_model(
 
     # Auto-encode string categorical columns to integer codes
     for col in cat_features:
-        if train_df[col].dtype == "object" or train_df[col].dtype.name == "category":
+        if train_df[col].dtype == "object" or train_df[col].dtype.name == "category" or pd.api.types.is_string_dtype(train_df[col]):
             all_cats = sorted(set(train_df[col].dropna().unique()))
             cat_map = {v: i + 1 for i, v in enumerate(all_cats)}  # 0 reserved for unknown
             train_df[col] = train_df[col].map(cat_map).fillna(0).astype("int32")
@@ -1574,6 +1657,7 @@ def _train_wc_model(
                 hidden_dims=hidden_dims_list,
                 win_hidden_dims=win_hidden_dims_list,
                 loss_type=debiasing,
+                dr_loss_type=dr_loss_type,
                 dropout=dropout,
                 cfr_lambda=cfr_lambda,
                 win_eps=win_eps,
@@ -1582,9 +1666,16 @@ def _train_wc_model(
                 ctr_weight=ctr_weight,
                 joint_weight=joint_weight,
                 impute_loss_weight=impute_loss_weight,
+                impute_loss_type=impute_loss_type,
+                impute_huber_delta=impute_huber_delta,
                 use_layer_norm=use_layer_norm,
                 use_numeric_bypass=use_numeric_bypass,
                 use_fm_interaction=not use_scalar_input,
+                stop_grad_win_embedding=stop_grad_win_embedding,
+                impute_hidden_dims=impute_hidden_dims_list,
+                win_dropout=win_dropout,
+                ctr_dropout=ctr_dropout,
+                impute_dropout=impute_dropout,
             )
         typer.echo(f"\nInitializing ESCM2-WC({debiasing}) model...")
         rngs = nnx.Rngs(0)
@@ -1642,6 +1733,8 @@ def _train_wc_model(
         best_val_loss = float("inf")
 
     best_state = None  # Will store nnx.State of best model
+    # Top-K state tracking for checkpoint averaging (Phase 16)
+    top_k_states = []  # List of (val_loss, epoch, nnx.State)
 
     # Checkpoint config
     checkpoint_enabled = distributed  # Only auto-checkpoint in distributed mode
@@ -1690,6 +1783,15 @@ def _train_wc_model(
                     "win_eps": win_eps,
                     "max_weight": max_weight,
                     "impute_loss_weight": impute_loss_weight,
+                    "dr_loss_type": dr_loss_type,
+                    "stop_grad_win_embedding": stop_grad_win_embedding,
+                    "impute_hidden_dims": list(impute_hidden_dims_list) if impute_hidden_dims_list else None,
+                    "impute_loss_type": impute_loss_type,
+                    "impute_huber_delta": impute_huber_delta if impute_loss_type == "huber" else None,
+                    "win_dropout": win_dropout,
+                    "ctr_dropout": ctr_dropout,
+                    "impute_dropout": impute_dropout,
+                    "top_k_avg": top_k_avg,
                 })
             wandb_run = wandb.init(
                 project=wandb_project,
@@ -1834,6 +1936,14 @@ def _train_wc_model(
             else:
                 es_patience_counter += 1
 
+            # Track top-K states for checkpoint averaging
+            if top_k_avg > 1:
+                _, current_state = nnx.split(model)
+                top_k_states.append((val_loss, epoch + 1, current_state))
+                top_k_states.sort(key=lambda x: x[0])
+                if len(top_k_states) > top_k_avg:
+                    top_k_states = top_k_states[:top_k_avg]
+
             # --- Training history record ---
             training_history.append({
                 "epoch": epoch + 1,
@@ -1889,8 +1999,21 @@ def _train_wc_model(
     training_time = time.time() - start_time
     typer.echo(f"\nTraining time: {training_time:.1f}s")
 
-    # Restore best model before evaluation
-    if best_state is not None:
+    # Restore best model (or averaged top-K) before evaluation
+    if top_k_avg > 1 and len(top_k_states) >= 2:
+        avg_epochs = [s[1] for s in top_k_states]
+        typer.echo(f"  Averaging top-{len(top_k_states)} checkpoints from epochs {avg_epochs}")
+        # Average only floating-point parameter leaves; keep non-numeric (RNG keys) from first state
+        states = [s[2] for s in top_k_states]
+
+        def _safe_avg(*leaves):
+            if hasattr(leaves[0], 'dtype') and jnp.issubdtype(leaves[0].dtype, jnp.floating):
+                return sum(leaves) / len(leaves)
+            return leaves[0]
+
+        avg_state = jax.tree.map(_safe_avg, *states)
+        nnx.update(model, avg_state)
+    elif best_state is not None:
         typer.echo(f"  Restoring best model from epoch {best_epoch}")
         nnx.update(model, best_state)
 
@@ -1985,6 +2108,15 @@ def _train_wc_model(
                 "win_eps": win_eps,
                 "max_weight": max_weight,
                 "impute_loss_weight": impute_loss_weight,
+                "dr_loss_type": dr_loss_type,
+                "stop_grad_win_embedding": stop_grad_win_embedding,
+                "impute_hidden_dims": list(impute_hidden_dims_list) if impute_hidden_dims_list else None,
+                "impute_loss_type": impute_loss_type,
+                "impute_huber_delta": impute_huber_delta if impute_loss_type == "huber" else None,
+                "win_dropout": win_dropout,
+                "ctr_dropout": ctr_dropout,
+                "impute_dropout": impute_dropout,
+                "top_k_avg": top_k_avg,
                 } if model_type == "escm2wc" else {}),
         },
         "training_time": training_time,

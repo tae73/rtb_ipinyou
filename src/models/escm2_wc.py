@@ -65,11 +65,20 @@ class ESCM2WCConfig(NamedTuple):
     ctr_weight: float = 1.0
     joint_weight: float = 1.0
     impute_loss_weight: float = 0.5
+    # Imputation loss config
+    impute_loss_type: str = "mse"  # 'mse' or 'huber'
+    impute_huber_delta: float = 0.1  # Huber loss delta (only used when impute_loss_type='huber')
     # Architecture options
     use_fm_interaction: bool = True
     use_layer_norm: bool = False
     use_numeric_bypass: bool = False
+    stop_grad_win_embedding: bool = False  # Stop gradient from win tower to shared embedding
     multi_hot_features: Optional[Sequence[str]] = None
+    impute_hidden_dims: Optional[Sequence[int]] = None  # Imputation tower dims (None → use hidden_dims)
+    # Per-tower dropout (None → use global dropout)
+    win_dropout: Optional[float] = None
+    ctr_dropout: Optional[float] = None
+    impute_dropout: Optional[float] = None
 
 
 class ESCM2WCOutput(NamedTuple):
@@ -144,7 +153,7 @@ class ESCM2WC(nnx.Module):
         self.win_tower = MLP(
             hidden_dims=config.win_hidden_dims,
             output_dim=1,
-            dropout=config.dropout,
+            dropout=config.win_dropout if config.win_dropout is not None else config.dropout,
             input_dim=input_dim,
             use_layer_norm=config.use_layer_norm,
             rngs=rngs,
@@ -154,17 +163,18 @@ class ESCM2WC(nnx.Module):
         self.ctr_tower = MLP(
             hidden_dims=config.hidden_dims,
             output_dim=1,
-            dropout=config.dropout,
+            dropout=config.ctr_dropout if config.ctr_dropout is not None else config.dropout,
             input_dim=input_dim,
             use_layer_norm=config.use_layer_norm,
             rngs=rngs,
         )
 
         # Imputation Tower: predicts CTR error delta_hat (linear, no sigmoid)
+        impute_dims = config.impute_hidden_dims if config.impute_hidden_dims is not None else config.hidden_dims
         self.imputation_tower = MLP(
-            hidden_dims=config.hidden_dims,
+            hidden_dims=impute_dims,
             output_dim=1,
-            dropout=config.dropout,
+            dropout=config.impute_dropout if config.impute_dropout is not None else config.dropout,
             input_dim=input_dim,
             use_layer_norm=config.use_layer_norm,
             rngs=rngs,
@@ -199,7 +209,10 @@ class ESCM2WC(nnx.Module):
                 embed = jnp.concatenate([embed, interaction_out], axis=-1)
 
         # Win prediction (propensity)
-        win_logit = self.win_tower(embed, training=training)
+        # Optional: stop gradient from win tower to shared embedding
+        # Prevents win tower's strong supervision from dominating embedding gradients
+        win_embed = jax.lax.stop_gradient(embed) if self.config.stop_grad_win_embedding else embed
+        win_logit = self.win_tower(win_embed, training=training)
         p_win = jax.nn.sigmoid(win_logit).squeeze(-1)
 
         # CTR prediction
@@ -299,9 +312,21 @@ def create_escm2wc_loss_fn(
             # Imputation tower supervision (won samples only)
             p_ctr_sg = jax.lax.stop_gradient(output.p_ctr)
             delta_target = batch["click"] - p_ctr_sg
-            impute_mse = jnp.square(output.y_impute - delta_target)
+            impute_residual = output.y_impute - delta_target
+            if config.impute_loss_type == "huber":
+                # Huber loss: robust to outlier deltas
+                delta = config.impute_huber_delta
+                abs_r = jnp.abs(impute_residual)
+                impute_element = jnp.where(
+                    abs_r <= delta,
+                    0.5 * jnp.square(impute_residual),
+                    delta * (abs_r - 0.5 * delta),
+                )
+            else:
+                # MSE (default)
+                impute_element = jnp.square(impute_residual)
             n_won = jnp.clip(batch["win"].sum(), 1.0, None)
-            impute_loss = jnp.sum(batch["win"] * impute_mse) / n_won
+            impute_loss = jnp.sum(batch["win"] * impute_element) / n_won
             ctr_loss = ctr_loss_base + config.impute_loss_weight * impute_loss
 
         else:

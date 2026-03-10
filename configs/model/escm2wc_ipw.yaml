@@ -19,6 +19,13 @@ win_weight: 1.0
 ctr_weight: 1.0
 joint_weight: 1.0
 impute_loss_weight: 0.5
+impute_loss_type: mse
+impute_huber_delta: 0.1
 use_fm_interaction: true
 use_layer_norm: true
 use_numeric_bypass: false
+stop_grad_win_embedding: false
+impute_hidden_dims: null
+win_dropout: null
+ctr_dropout: null
+impute_dropout: null
