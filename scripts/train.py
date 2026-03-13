@@ -48,6 +48,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.features.engineering import load_feature_splits
+from src.metrics.evaluation import EvalMetrics, compute_ece, compute_ieb, compute_metrics
 
 app = typer.Typer(
     name="train",
@@ -60,17 +61,6 @@ app = typer.Typer(
 # Result Types
 # =============================================================================
 
-class EvalMetrics(NamedTuple):
-    """Evaluation metrics."""
-    auc: float
-    log_loss: float
-    accuracy: float
-    precision: float
-    recall: float
-    f1: float
-    ece: float  # Expected calibration error
-
-
 class ModelResult(NamedTuple):
     """Training result."""
     model_name: str
@@ -82,101 +72,8 @@ class ModelResult(NamedTuple):
 
 
 # =============================================================================
-# Evaluation Functions
+# CLI Display Functions
 # =============================================================================
-
-def compute_metrics(
-    y_true: np.ndarray,
-    y_pred: np.ndarray,
-    threshold: float = 0.5,
-) -> EvalMetrics:
-    """Compute evaluation metrics.
-
-    Args:
-        y_true: Ground truth labels
-        y_pred: Predicted probabilities
-        threshold: Classification threshold
-
-    Returns:
-        EvalMetrics
-    """
-    from sklearn.metrics import (
-        roc_auc_score,
-        log_loss,
-        accuracy_score,
-        precision_score,
-        recall_score,
-        f1_score,
-    )
-
-    # Filter out NaN
-    mask = ~np.isnan(y_pred) & ~np.isnan(y_true)
-    y_true = y_true[mask]
-    y_pred = y_pred[mask]
-
-    # Clip predictions for log_loss
-    y_pred_clipped = np.clip(y_pred, 1e-7, 1 - 1e-7)
-
-    # Compute metrics
-    try:
-        auc = roc_auc_score(y_true, y_pred)
-    except ValueError:
-        auc = 0.5  # Fallback if all same class
-
-    logloss = log_loss(y_true, y_pred_clipped)
-
-    # Binary predictions
-    y_pred_binary = (y_pred >= threshold).astype(int)
-
-    accuracy = accuracy_score(y_true, y_pred_binary)
-    precision = precision_score(y_true, y_pred_binary, zero_division=0)
-    recall = recall_score(y_true, y_pred_binary, zero_division=0)
-    f1 = f1_score(y_true, y_pred_binary, zero_division=0)
-
-    # Expected Calibration Error (ECE)
-    ece = compute_ece(y_true, y_pred)
-
-    return EvalMetrics(
-        auc=auc,
-        log_loss=logloss,
-        accuracy=accuracy,
-        precision=precision,
-        recall=recall,
-        f1=f1,
-        ece=ece,
-    )
-
-
-def compute_ece(
-    y_true: np.ndarray,
-    y_pred: np.ndarray,
-    n_bins: int = 10,
-) -> float:
-    """Compute Expected Calibration Error.
-
-    Args:
-        y_true: Ground truth labels
-        y_pred: Predicted probabilities
-        n_bins: Number of bins
-
-    Returns:
-        ECE value (lower is better)
-    """
-    bin_boundaries = np.linspace(0, 1, n_bins + 1)
-    ece = 0.0
-    total = len(y_true)
-
-    for i in range(n_bins):
-        in_bin = (y_pred >= bin_boundaries[i]) & (y_pred < bin_boundaries[i + 1])
-        prop_in_bin = in_bin.sum() / total
-
-        if prop_in_bin > 0:
-            avg_confidence = y_pred[in_bin].mean()
-            avg_accuracy = y_true[in_bin].mean()
-            ece += prop_in_bin * abs(avg_accuracy - avg_confidence)
-
-    return ece
-
 
 def print_metrics(name: str, metrics: EvalMetrics) -> None:
     """Print metrics in a formatted way."""
@@ -317,18 +214,14 @@ def _compute_val_metrics(
         except ValueError:
             metrics["ctr_auc"] = 0.5
         metrics["ctr_ece"] = float(compute_ece(click_labels[won_mask], p_ctr[won_mask]))
-        ctr_mean = float(p_ctr[won_mask].mean())
-        ctr_actual = float(click_labels[won_mask].mean())
-        metrics["ctr_ieb"] = abs(ctr_mean - ctr_actual) / max(ctr_actual, 1e-8)
+        metrics["ctr_ieb"] = float(compute_ieb(click_labels[won_mask], p_ctr[won_mask]))
 
     # WCTR AUC (all bids)
     try:
         metrics["wctr_auc"] = float(roc_auc_score(click_labels, p_click_bid))
     except ValueError:
         metrics["wctr_auc"] = 0.5
-    wctr_mean = float(p_click_bid.mean())
-    wctr_actual = float(click_labels.mean())
-    metrics["wctr_ieb"] = abs(wctr_mean - wctr_actual) / max(wctr_actual, 1e-8)
+    metrics["wctr_ieb"] = float(compute_ieb(click_labels, p_click_bid))
 
     return metrics
 
@@ -2063,13 +1956,18 @@ def _train_wc_model(
     typer.echo(f"WCTR AUC (test, all bids): {wctr_auc_test.auc:.4f}")
 
     # IEB (Inherent Estimation Bias)
-    ctr_mean = test_pred["p_ctr"][won_mask_test].mean() if won_mask_test.sum() > 0 else 0
-    ctr_actual = test_df["click"].values[won_mask_test].mean() if won_mask_test.sum() > 0 else 0
-    ctr_ieb = abs(ctr_mean - ctr_actual) / max(ctr_actual, 1e-8)
+    if won_mask_test.sum() > 0:
+        ctr_ieb = compute_ieb(
+            test_df["click"].values[won_mask_test],
+            test_pred["p_ctr"][won_mask_test],
+        )
+    else:
+        ctr_ieb = 0.0
 
-    wctr_mean = test_pred["p_click_bid"].mean()
-    wctr_actual = test_df["click"].values.mean()
-    wctr_ieb = abs(wctr_mean - wctr_actual) / max(wctr_actual, 1e-8)
+    wctr_ieb = compute_ieb(
+        test_df["click"].values,
+        test_pred["p_click_bid"],
+    )
 
     typer.echo(f"CTR IEB (test): {ctr_ieb:.4f}")
     typer.echo(f"WCTR IEB (test): {wctr_ieb:.4f}")
