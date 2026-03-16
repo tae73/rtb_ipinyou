@@ -45,11 +45,13 @@ class RTBDataSource:
         num_arrays: Dict[str, np.ndarray],
         win: np.ndarray,
         click: np.ndarray,
+        ext_propensity: Optional[np.ndarray] = None,
     ):
         self.cat_arrays = cat_arrays  # {feature: int32 [N,]}
         self.num_arrays = num_arrays  # {feature: float32 [N,], Z-score applied}
         self.win = win                # float32 [N,]
         self.click = click            # float32 [N,]
+        self.ext_propensity = ext_propensity  # float32 [N,] or None
 
     def __len__(self) -> int:
         return len(self.win)
@@ -60,7 +62,10 @@ class RTBDataSource:
             x[col] = arr[idx]
         for col, arr in self.num_arrays.items():
             x[col] = arr[idx]
-        return {"x": x, "win": self.win[idx], "click": self.click[idx]}
+        result = {"x": x, "win": self.win[idx], "click": self.click[idx]}
+        if self.ext_propensity is not None:
+            result["ext_propensity"] = self.ext_propensity[idx]
+        return result
 
 
 class NumpyBatchIterator:
@@ -100,12 +105,15 @@ class NumpyBatchIterator:
                     break
                 end = self._n
             idx = indices[start:end]
-            yield {
+            batch = {
                 "x": {col: arr[idx] for col, arr in self.source.cat_arrays.items()}
                    | {col: arr[idx] for col, arr in self.source.num_arrays.items()},
                 "win": self.source.win[idx],
                 "click": self.source.click[idx],
             }
+            if self.source.ext_propensity is not None:
+                batch["ext_propensity"] = self.source.ext_propensity[idx]
+            yield batch
 
     def __len__(self) -> int:
         if self.drop_remainder:
@@ -119,6 +127,7 @@ def materialize_to_source(
     num_features: List[str],
     norm_mean: Dict[str, float],
     norm_std: Dict[str, float],
+    ext_propensity: Optional[np.ndarray] = None,
 ) -> RTBDataSource:
     """One-time DataFrame → contiguous numpy conversion.
 
@@ -130,6 +139,7 @@ def materialize_to_source(
         num_features: Numerical feature column names.
         norm_mean: Z-score means from training set.
         norm_std: Z-score stds from training set.
+        ext_propensity: Optional external win propensity scores [N,].
 
     Returns:
         RTBDataSource ready for NumpyBatchIterator.
@@ -149,7 +159,11 @@ def materialize_to_source(
     win = df["win"].values.astype(np.float32)
     click = df["click"].values.astype(np.float32)
 
-    return RTBDataSource(cat_arrays, num_arrays, win, click)
+    ext_ps = (
+        ext_propensity.astype(np.float32) if ext_propensity is not None else None
+    )
+
+    return RTBDataSource(cat_arrays, num_arrays, win, click, ext_propensity=ext_ps)
 
 
 def create_train_loader(
@@ -238,4 +252,12 @@ def batch_to_jax(
         win = jax.device_put(win, data_sharding)
         click = jax.device_put(click, data_sharding)
 
-    return {"x": x, "win": win, "click": click}
+    result = {"x": x, "win": win, "click": click}
+
+    if "ext_propensity" in batch:
+        ext_ps = jnp.asarray(batch["ext_propensity"], dtype=jnp.float32)
+        if data_sharding:
+            ext_ps = jax.device_put(ext_ps, data_sharding)
+        result["ext_propensity"] = ext_ps
+
+    return result

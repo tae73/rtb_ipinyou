@@ -30,3 +30,5 @@ impute_hidden_dims: null  # defaults to hidden_dims; e.g. [32, 16] for smaller t
 win_dropout: null
 ctr_dropout: null
 impute_dropout: null
+# External propensity (use LGB win PS for DR weights instead of internal win tower)
+use_external_propensity: false

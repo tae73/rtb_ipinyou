@@ -1,6 +1,6 @@
 # Neural Model Performance Tuning Log
 
-**Last Updated**: 2026-03-10 (Phase 13B-16 결과 해석 섹션 추가)
+**Last Updated**: 2026-03-16 (Phase 17/18 실험 계획 추가 — cfr_lambda 확장 + External Win PS)
 
 ## 1. Problem Statement
 
@@ -533,6 +533,49 @@ evaluation 시 floating-point parameter만 평균 (RNG key는 제외).
 - Checkpoint averaging이 WCTR AUC를 0.6843→0.6722로 오히려 하락시킴 (-0.012)
 - Epochs 4,5,6 평균이 best epoch 5보다 나쁨 — temporal shift 하에서 peak epoch의 특수한 지점이 중요
 - Smoothing이 그 peak을 희석. 일반적 학습과 달리 S2→S3 shift에서는 averaging이 역효과
+
+### Phase 17: 미탐색 Hyperparameter 확장 — IN PROGRESS
+
+**가설**: Phase 13B에서 cfr_lambda의 단조 증가 트렌드(0.0→0.1→0.2)가 확인됨.
+cfr_lambda를 0.2 이상으로 확장하고, impute_loss_weight와 impute_hidden_dims를
+함께 조정하면 imputation tower의 regularization이 강화되어 추가 개선 가능.
+
+**Phase 17-1: cfr_lambda 확장** (Run AL base)
+
+| Run | cfr_lambda | impute_loss_weight | Test WCTR AUC | Test CTR AUC | Test WCTR IEB |
+|-----|-----------|-------------------|--------------|-------------|--------------|
+| *AL (baseline)* | 0.2 | 0.5 | **0.6843** | 0.5636 | 0.014 |
+| AQ | 0.3 | 0.5 | — | — | — |
+| AR | 0.5 | 0.5 | — | — | — |
+
+**Phase 17-2: impute_loss_weight 탐색** (17-1 best cfr_lambda 기반)
+
+| Run | impute_loss_weight | cfr_lambda | Test WCTR AUC | Test CTR AUC | Test WCTR IEB |
+|-----|-------------------|-----------|--------------|-------------|--------------|
+| AS | 0.3 | {17-1 best} | — | — | — |
+| AT | 1.0 | {17-1 best} | — | — | — |
+
+**Phase 17-3: impute_hidden_dims 축소** (17-2 best 기반)
+
+| Run | impute_hidden_dims | Test WCTR AUC | Test CTR AUC | Test WCTR IEB |
+|-----|-------------------|--------------|-------------|--------------|
+| AU | (64, 32) | — | — | — |
+
+### Phase 18: External Win Propensity for DR — IN PROGRESS
+
+**가설**: Internal win tower(AUC 0.64, win_weight=0.01 제약)를 LGB Win PS(AUC 0.91)로
+교체하면 DR importance weights의 정확도가 크게 향상되어 WCTR AUC 개선 + calibration 유지.
+논문의 DR 프레임워크를 유지하면서 propensity source만 교체 — causal inference standard practice.
+
+**코드 변경**: `--use-external-propensity` CLI 옵션 추가.
+`load_win_propensity_models()` → `materialize_to_source(ext_propensity=...)` → `batch_to_jax()` →
+loss_fn에서 `config.use_external_propensity` 분기로 external PS 사용.
+Internal win tower는 Win BCE + ESMM joint constraint 유지.
+
+| Run | Config | External PS | Test WCTR AUC | Test CTR AUC | Test WCTR IEB |
+|-----|--------|-------------|--------------|-------------|--------------|
+| AV | Track A best | LGB Win (AUC 0.91) | — | — | — |
+| AW | Run AL (대조군) | LGB Win (AUC 0.91) | — | — | — |
 
 ---
 

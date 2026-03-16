@@ -79,6 +79,8 @@ class ESCM2WCConfig(NamedTuple):
     win_dropout: Optional[float] = None
     ctr_dropout: Optional[float] = None
     impute_dropout: Optional[float] = None
+    # External propensity
+    use_external_propensity: bool = False  # Use external LGB win PS for DR weights
 
 
 class ESCM2WCOutput(NamedTuple):
@@ -271,9 +273,12 @@ def create_escm2wc_loss_fn(
         )
 
         # --- Propensity weights for CTR debiasing ---
-        propensity = jnp.clip(
-            jax.lax.stop_gradient(output.p_win), config.win_eps, 1.0
-        )
+        if config.use_external_propensity and "ext_propensity" in batch:
+            propensity = jnp.clip(batch["ext_propensity"], config.win_eps, 1.0)
+        else:
+            propensity = jnp.clip(
+                jax.lax.stop_gradient(output.p_win), config.win_eps, 1.0
+            )
         raw_weights = batch["win"] / propensity
         weights = jnp.clip(raw_weights, 0.0, config.max_weight)
 

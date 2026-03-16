@@ -1188,6 +1188,16 @@ def escm2wc(
         "--top-k-avg",
         help="Average top-K checkpoints by val loss (1 = no averaging, best only)",
     ),
+    use_external_propensity: bool = typer.Option(
+        False,
+        "--use-external-propensity/--no-use-external-propensity",
+        help="Use external LGB win PS for DR importance weights (instead of internal win tower)",
+    ),
+    external_ps_model_dir: Optional[str] = typer.Option(
+        None,
+        "--external-ps-model-dir",
+        help="Directory containing lgb_win.txt for external win PS (defaults to --model-dir)",
+    ),
 ) -> None:
     """Train ESCM2-WC model (Bid->Win->Click, 3-tower with DR/IPW).
 
@@ -1249,6 +1259,8 @@ def escm2wc(
         ctr_dropout=ctr_dropout,
         impute_dropout=impute_dropout,
         top_k_avg=top_k_avg,
+        use_external_propensity=use_external_propensity,
+        external_ps_model_dir=external_ps_model_dir,
     )
 
 
@@ -1309,6 +1321,9 @@ def _train_wc_model(
     impute_dropout: Optional[float] = None,
     # Checkpoint averaging
     top_k_avg: int = 1,
+    # External propensity (ESCM2-WC only)
+    use_external_propensity: bool = False,
+    external_ps_model_dir: Optional[str] = None,
 ) -> None:
     """Shared training logic for ESMM-WC and ESCM2-WC.
 
@@ -1401,6 +1416,8 @@ def _train_wc_model(
             typer.echo(f"  Impute loss type: {impute_loss_type} (delta={impute_huber_delta})")
         if win_dropout is not None or ctr_dropout is not None or impute_dropout is not None:
             typer.echo(f"  Per-tower dropout: win={win_dropout}, ctr={ctr_dropout}, impute={impute_dropout}")
+    if use_external_propensity and model_type == "escm2wc":
+        typer.echo(f"  External propensity: enabled (dir={external_ps_model_dir or model_dir})")
     if top_k_avg > 1:
         typer.echo(f"  Checkpoint averaging: top-{top_k_avg}")
     if distributed:
@@ -1486,11 +1503,27 @@ def _train_wc_model(
     for col in num_features:
         feature_dims[col] = -1  # Dense feature sentinel
 
+    # External win propensity (ESCM2-WC DR only)
+    ext_ps_train, ext_ps_val, ext_ps_test = None, None, None
+    if use_external_propensity and model_type == "escm2wc":
+        from src.debiasing.win_propensity import load_win_propensity_models
+        ps_dir = Path(external_ps_model_dir) if external_ps_model_dir else model_dir
+        typer.echo(f"\nLoading external win PS from: {ps_dir}")
+        ps_train = load_win_propensity_models(ps_dir, train_df)
+        ps_val = load_win_propensity_models(ps_dir, val_df)
+        ps_test = load_win_propensity_models(ps_dir, test_df)
+        ext_ps_train = ps_train.result_win.propensity_clipped
+        ext_ps_val = ps_val.result_win.propensity_clipped
+        ext_ps_test = ps_test.result_win.propensity_clipped
+        typer.echo(f"  Train PS: AUC={ps_train.result_win.auc:.4f}, mean={ext_ps_train.mean():.4f}")
+        typer.echo(f"  Val PS:   AUC={ps_val.result_win.auc:.4f}, mean={ext_ps_val.mean():.4f}")
+        typer.echo(f"  Test PS:  AUC={ps_test.result_win.auc:.4f}, mean={ext_ps_test.mean():.4f}")
+
     # Pre-materialize DataFrames → grain RTBDataSource (numpy arrays)
     typer.echo("\nMaterializing data to numpy...")
-    train_source = materialize_to_source(train_df, cat_features, num_features, norm_mean, norm_std)
-    val_source = materialize_to_source(val_df, cat_features, num_features, norm_mean, norm_std)
-    test_source = materialize_to_source(test_df, cat_features, num_features, norm_mean, norm_std)
+    train_source = materialize_to_source(train_df, cat_features, num_features, norm_mean, norm_std, ext_propensity=ext_ps_train)
+    val_source = materialize_to_source(val_df, cat_features, num_features, norm_mean, norm_std, ext_propensity=ext_ps_val)
+    test_source = materialize_to_source(test_df, cat_features, num_features, norm_mean, norm_std, ext_propensity=ext_ps_test)
     del train_df, val_df  # Free DataFrame memory (test_df kept for evaluation labels)
     gc.collect()
     typer.echo(f"  Train source: {len(train_source):,} samples")
@@ -1569,6 +1602,7 @@ def _train_wc_model(
                 win_dropout=win_dropout,
                 ctr_dropout=ctr_dropout,
                 impute_dropout=impute_dropout,
+                use_external_propensity=use_external_propensity,
             )
         typer.echo(f"\nInitializing ESCM2-WC({debiasing}) model...")
         rngs = nnx.Rngs(0)
@@ -1685,6 +1719,7 @@ def _train_wc_model(
                     "ctr_dropout": ctr_dropout,
                     "impute_dropout": impute_dropout,
                     "top_k_avg": top_k_avg,
+                    "use_external_propensity": use_external_propensity,
                 })
             wandb_run = wandb.init(
                 project=wandb_project,
@@ -2015,6 +2050,7 @@ def _train_wc_model(
                 "ctr_dropout": ctr_dropout,
                 "impute_dropout": impute_dropout,
                 "top_k_avg": top_k_avg,
+                "use_external_propensity": use_external_propensity,
                 } if model_type == "escm2wc" else {}),
         },
         "training_time": training_time,
