@@ -62,6 +62,7 @@ from src.features.engineering import (
     compute_region_stats,
     compute_market_stats,
     compute_normalization_stats,
+    target_encode_kfold,
 )
 from src.features.usertag import (
     build_vocab,
@@ -179,6 +180,11 @@ def build(
         5000,
         "--creative-buckets",
         help="Hash buckets for creative (high-cardinality encoding)",
+    ),
+    target_encoding: bool = typer.Option(
+        False,
+        "--target-encoding/--no-target-encoding",
+        help="Apply target encoding (K-fold OOF) for click/win on categorical features",
     ),
     quiet: bool = typer.Option(
         False,
@@ -353,6 +359,39 @@ def build(
     typer.echo(f"  Train: {len(train_df):,}")
     typer.echo(f"  Val:   {len(val_df):,}")
     typer.echo(f"  Test:  {len(test_df):,}")
+
+    # Target encoding (K-fold OOF for train, full train stats for val/test)
+    if target_encoding:
+        te_cats = ["region", "city", "advertiser", "domain_hash", "creative_hash"]
+        typer.echo(f"\nApplying target encoding ({len(te_cats)} features × 2 targets)...")
+        t0 = time.time()
+
+        for target_col, suffix in [("click", "_te_click"), ("win", "_te_win")]:
+            te_result = target_encode_kfold(train_df, val_df, te_cats, target_col)
+            # Train: K-fold OOF encoded
+            train_te = te_result.train_encoded.rename(
+                columns={c: c.replace("_te", suffix) for c in te_result.te_features}
+            )
+            train_df = pd.concat([train_df, train_te], axis=1)
+            # Val: full train stats
+            val_te = te_result.val_encoded.rename(
+                columns={c: c.replace("_te", suffix) for c in te_result.te_features}
+            )
+            val_df = pd.concat([val_df, val_te], axis=1)
+            # Test: full train stats (same encodings as val)
+            test_te = pd.DataFrame(index=test_df.index)
+            for col, te_col in zip(te_cats, te_result.te_features):
+                out_col = te_col.replace("_te", suffix)
+                test_te[out_col] = (
+                    pd.Series(test_df[col].values)
+                    .map(te_result.encodings[col])
+                    .fillna(te_result.global_mean)
+                    .values
+                )
+            test_df = pd.concat([test_df, test_te], axis=1)
+            typer.echo(f"  {target_col}: {len(te_cats)} features, global_mean={te_result.global_mean:.6f}")
+
+        typer.echo(f"[target encoding] completed in {format_duration(time.time() - t0)}")
 
     # Compute statistics from training set (for region/market features)
     typer.echo("\nComputing training set statistics...")
@@ -618,6 +657,109 @@ def stats(
         hour_dist = df["hour"].value_counts().head(5)
         for hour, count in hour_dist.items():
             typer.echo(f"  Hour {hour}: {count:,} ({count/len(df):.1%})")
+
+
+@app.command("target-encode")
+def target_encode_cmd(
+    data_dir: Path = typer.Option(
+        ...,
+        "--data-dir",
+        "-d",
+        help="Directory containing existing feature splits (train/val/test.parquet)",
+    ),
+    output_dir: Path = typer.Option(
+        ...,
+        "--output-dir",
+        "-o",
+        help="Output directory for TE-augmented feature splits",
+    ),
+) -> None:
+    """Apply target encoding to existing feature splits.
+
+    Loads train/val/test.parquet, applies K-fold OOF target encoding
+    for click and win targets on categorical features, and saves
+    augmented splits with updated metadata.
+    """
+    import numpy as np
+
+    total_start = time.time()
+    typer.echo(f"Loading existing splits from: {data_dir}")
+
+    t0 = time.time()
+    train_df, val_df, test_df, metadata = load_feature_splits(data_dir)
+    typer.echo(f"  Train: {len(train_df):,}, Val: {len(val_df):,}, Test: {len(test_df):,}")
+    typer.echo(f"[load splits] completed in {format_duration(time.time() - t0)}")
+
+    te_cats = ["region", "city", "advertiser", "domain_hash", "creative_hash"]
+    typer.echo(f"\nApplying target encoding ({len(te_cats)} features × 2 targets)...")
+    t0 = time.time()
+
+    for target_col, suffix in [("click", "_te_click"), ("win", "_te_win")]:
+        te_result = target_encode_kfold(train_df, val_df, te_cats, target_col)
+        # Train: K-fold OOF encoded
+        train_te = te_result.train_encoded.rename(
+            columns={c: c.replace("_te", suffix) for c in te_result.te_features}
+        )
+        train_df = pd.concat([train_df, train_te], axis=1)
+        # Val: full train stats
+        val_te = te_result.val_encoded.rename(
+            columns={c: c.replace("_te", suffix) for c in te_result.te_features}
+        )
+        val_df = pd.concat([val_df, val_te], axis=1)
+        # Test: full train stats (same encodings as val)
+        test_te = pd.DataFrame(index=test_df.index)
+        for col, te_col in zip(te_cats, te_result.te_features):
+            out_col = te_col.replace("_te", suffix)
+            test_te[out_col] = (
+                pd.Series(test_df[col].values)
+                .map(te_result.encodings[col])
+                .fillna(te_result.global_mean)
+                .values
+            )
+        test_df = pd.concat([test_df, test_te], axis=1)
+        typer.echo(f"  {target_col}: {len(te_cats)} features, global_mean={te_result.global_mean:.6f}")
+
+    typer.echo(f"[target encoding] completed in {format_duration(time.time() - t0)}")
+
+    # Recompute feature info and normalization stats with new TE columns
+    feature_info = get_feature_info(train_df)
+    norm_stats = compute_normalization_stats(train_df, feature_info.numerical)
+    typer.echo(f"\nFeatures: {feature_info.total_count} total ({len(feature_info.categorical)} cat, {len(feature_info.numerical)} num)")
+
+    # Save augmented splits
+    typer.echo(f"\nSaving to: {output_dir}")
+    t0 = time.time()
+    save_feature_splits(train_df, val_df, test_df, output_dir, feature_info, norm_stats)
+
+    # Copy region/market stats from source
+    src_stats = data_dir / "stats"
+    dst_stats = output_dir / "stats"
+    if src_stats.exists():
+        dst_stats.mkdir(parents=True, exist_ok=True)
+        import shutil
+        for f in src_stats.iterdir():
+            shutil.copy2(f, dst_stats / f.name)
+        typer.echo(f"  Copied stats/ from source")
+
+    typer.echo(f"[save splits] completed in {format_duration(time.time() - t0)}")
+
+    # Verify TE columns
+    te_cols = [c for c in train_df.columns if "_te_click" in c or "_te_win" in c]
+    typer.echo(f"\nTE columns added: {te_cols}")
+
+    # Summary
+    typer.echo("\n" + "=" * 60)
+    typer.echo(typer.style("Feature building with TE complete!", fg=typer.colors.GREEN, bold=True))
+    typer.echo(f"Total features: {feature_info.total_count}")
+    typer.echo(f"  Categorical: {len(feature_info.categorical)}")
+    typer.echo(f"  Numerical: {len(feature_info.numerical)}")
+
+    for name, split_df in [("Train", train_df), ("Val", val_df), ("Test", test_df)]:
+        stats = compute_dataset_stats(split_df)
+        typer.echo(f"\n{name} set:")
+        typer.echo(f"  Rows: {stats.n_bids:,} | Win: {stats.win_rate:.2%} | CTR: {stats.ctr:.4%}")
+
+    typer.echo(f"\n[TOTAL] completed in {format_duration(time.time() - total_start)}")
 
 
 if __name__ == "__main__":

@@ -100,8 +100,6 @@ def target_encode_kfold(
     Returns:
         TargetEncodingResult with encoded DataFrames, feature names, and encodings
     """
-    from sklearn.model_selection import KFold
-
     target = train_df[target_col].values
     global_mean = float(np.mean(target))
 
@@ -110,12 +108,20 @@ def target_encode_kfold(
     val_encoded = pd.DataFrame(index=val_df.index)
     encodings: Dict[str, Dict] = {}
 
-    kf = KFold(n_splits=n_folds, shuffle=True, random_state=seed)
+    # Pure numpy K-fold split (no sklearn dependency)
+    n = len(train_df)
+    rng = np.random.RandomState(seed)
+    indices = rng.permutation(n)
+    fold_sizes = np.full(n_folds, n // n_folds, dtype=int)
+    fold_sizes[:n % n_folds] += 1
+    fold_indices = np.split(indices, np.cumsum(fold_sizes)[:-1])
 
     for col, te_col in zip(cat_features, te_features):
         # K-fold OOF encoding for train
         train_encoded[te_col] = global_mean
-        for train_idx, oof_idx in kf.split(train_df):
+        for fold_i in range(n_folds):
+            oof_idx = fold_indices[fold_i]
+            train_idx = np.concatenate([fold_indices[j] for j in range(n_folds) if j != fold_i])
             fold_target = target[train_idx]
             fold_cats = train_df[col].values[train_idx]
             # Compute per-category stats on fold train (vectorized)

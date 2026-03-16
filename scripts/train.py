@@ -50,6 +50,37 @@ sys.path.insert(0, str(project_root))
 from src.features.engineering import load_feature_splits
 from src.metrics.evaluation import EvalMetrics, compute_ece, compute_ieb, compute_metrics
 
+
+def _roc_auc_score(y_true: np.ndarray, y_score: np.ndarray) -> float:
+    """Pure numpy ROC AUC (no sklearn dependency).
+
+    Equivalent to sklearn.metrics.roc_auc_score for binary classification.
+    Uses the ranking-based formula: AUC = (sum_ranks_positive - n1*(n1+1)/2) / (n1*n0).
+    """
+    y_true = np.asarray(y_true, dtype=np.intp)
+    y_score = np.asarray(y_score, dtype=np.float64)
+    n1 = y_true.sum()
+    n0 = len(y_true) - n1
+    if n1 == 0 or n0 == 0:
+        raise ValueError("Only one class present in y_true.")
+    order = np.argsort(y_score)
+    ranks = np.empty_like(order, dtype=np.float64)
+    ranks[order] = np.arange(1, len(y_true) + 1, dtype=np.float64)
+    # Handle ties: average rank for tied scores
+    sorted_scores = y_score[order]
+    i = 0
+    while i < len(sorted_scores):
+        j = i + 1
+        while j < len(sorted_scores) and sorted_scores[j] == sorted_scores[i]:
+            j += 1
+        if j > i + 1:
+            avg_rank = (i + 1 + j) / 2.0
+            for k in range(i, j):
+                ranks[order[k]] = avg_rank
+        i = j
+    return float((ranks[y_true == 1].sum() - n1 * (n1 + 1) / 2) / (n1 * n0))
+
+
 app = typer.Typer(
     name="train",
     help="Train prediction models for RTB (Bid→Win→Click)",
@@ -201,8 +232,7 @@ def _compute_val_metrics(
 
     # Win AUC (all bids)
     try:
-        from sklearn.metrics import roc_auc_score
-        metrics["win_auc"] = float(roc_auc_score(win_labels, p_win))
+        metrics["win_auc"] = float(_roc_auc_score(win_labels, p_win))
     except ValueError:
         metrics["win_auc"] = 0.5
 
@@ -210,7 +240,7 @@ def _compute_val_metrics(
     won_mask = win_labels == 1
     if won_mask.sum() > 0:
         try:
-            metrics["ctr_auc"] = float(roc_auc_score(click_labels[won_mask], p_ctr[won_mask]))
+            metrics["ctr_auc"] = float(_roc_auc_score(click_labels[won_mask], p_ctr[won_mask]))
         except ValueError:
             metrics["ctr_auc"] = 0.5
         metrics["ctr_ece"] = float(compute_ece(click_labels[won_mask], p_ctr[won_mask]))
@@ -218,7 +248,7 @@ def _compute_val_metrics(
 
     # WCTR AUC (all bids)
     try:
-        metrics["wctr_auc"] = float(roc_auc_score(click_labels, p_click_bid))
+        metrics["wctr_auc"] = float(_roc_auc_score(click_labels, p_click_bid))
     except ValueError:
         metrics["wctr_auc"] = 0.5
     metrics["wctr_ieb"] = float(compute_ieb(click_labels, p_click_bid))

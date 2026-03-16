@@ -1,6 +1,6 @@
 # RTB iPinYou Project Progress Tracking
 
-**Last Updated**: 2026-03-16 (Phase 17/18 코드 구현 — External Win PS pipeline, cfr_lambda/impute_loss_weight 확장 실험 계획)
+**Last Updated**: 2026-03-16 (Phase 20 Target Encoding — 가설 기각, WCTR AUC 0.5480 vs J 0.6905)
 
 ## Project Overview
 
@@ -68,7 +68,7 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 ### Task 1.4: Feature Ablation (Partially Complete)
 - [x] `domain` feature 추가: 108K domains → hash encoding (10K buckets) + frequency encoding (freq + freq_log)
 - [x] `creative` feature 추가: hash encoding (5K buckets) + frequency encoding (freq + freq_log)
-- [ ] Target encoding 적용: Notebook 02에서 구현 완료 (`target_encode_kfold`), baseline에 적용하여 ablation
+- [x] Target encoding 적용: `target_encode_kfold` 파이프라인 통합 (`--target-encoding` flag + `target-encode` 서브커맨드), Phase 20 실험 진행 중
 - [ ] EDA에서 S2→S3 creative overlap 비율 확인 (temporal drift 주요 원인 가능성)
 
 ---
@@ -102,16 +102,24 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 - [x] `experiments/sweep_escm2wc.yaml`: **NEW** — Bayes sweep config (15 params: architecture + training + debiasing)
 - [x] `experiments/sweep_esmmwc.yaml`: **NEW** — Bayes sweep config (7 params: architecture + training only)
 
-### Task 2.2.7: ESCM²-WC(DR) Performance Improvement 🔄 In Progress
+### Task 2.2.7: ESCM²-WC(DR) Performance Improvement ✅ Complete
 - [x] `src/distributed/data_loader.py`: RTBDataSource, NumpyBatchIterator, materialize_to_source, batch_to_jax에 ext_propensity 전파
 - [x] `src/models/escm2_wc.py`: ESCM2WCConfig에 use_external_propensity + loss_fn propensity 분기
 - [x] `scripts/train.py`: `--use-external-propensity`, `--external-ps-model-dir` CLI flags + external PS 로드/주입
 - [x] `configs/model/escm2wc_dr.yaml`: use_external_propensity 필드 추가
-- [x] `docs/performance_tuning.md`: Phase 17/18 실험 계획 기록
-- [ ] Phase 17-1: cfr_lambda={0.3, 0.5} 실험 실행 및 결과 기록
-- [ ] Phase 17-2: impute_loss_weight 탐색 (17-1 best 기반)
-- [ ] Phase 17-3: impute_hidden_dims 축소 (선택)
-- [ ] Phase 18: External Win PS + Track A best config 실험
+- [x] `docs/performance_tuning.md`: Phase 17/18 실험 결과 기록
+- [x] Phase 17-1: cfr_lambda={0.3, 0.5} — AQ(0.6841), AR(0.6774), AL(0.2) 최적 확정
+- [x] Phase 17-2: impute_loss_weight={0.3, 1.0} — AS(0.6866), AT(0.6759), AL(0.5) 최적. IEB 급증
+- [x] Phase 17-3: SKIPPED (17-1/2 모두 AL 대비 IEB 악화)
+- [x] Phase 18: External Win PS — **Run AW WCTR AUC 0.6882 (ESCM2-WC best)**, AV(0.6712)
+
+### Task 2.2.8: Target Encoding Feature 추가 (Phase 20) ❌ 가설 기각
+- [x] `src/features/engineering.py`: `target_encode_kfold()` sklearn KFold → pure numpy KFold 대체 (numpy 호환성)
+- [x] `scripts/build_features.py`: `--target-encoding/--no-target-encoding` CLI 플래그 + `target-encode` 서브커맨드 추가
+- [x] Feature rebuild: 5 cats × 2 targets = 10 TE features (numerical), 30→40 features 확인
+- [x] Run AY: ESMM-WC + TE → **WCTR AUC 0.5480 (J 0.6905 대비 -0.1424)** — 가설 기각
+- [x] Run AX: SKIPPED (AY 결과 기반, TE가 neural model에서 역효과)
+- [x] `docs/performance_tuning.md`: Phase 20 결과 기록 완료
 
 ### Task 2.3: Ablation Study
 - [ ] `notebooks/04_prediction_debiasing.ipynb`
@@ -566,6 +574,23 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 3. 3rd tower(Imputation) overhead가 temporal shift에 추가 취약점
 4. ESCM2-WC best(AL 0.6843) < ESMM-WC(J 0.6905) — 일관적 열위
 
+### Phase 17-18 실험 완료 (2026-03-16)
+
+**Phase 17: cfr_lambda/impute_loss_weight 확장 — AL(0.2/0.5) 최적 확정**
+- Phase 17-1: AQ(cfr=0.3, WCTR 0.6841), AR(cfr=0.5, 0.6774) — AUC 유지~하락, IEB 8배 악화 (0.014→0.10+)
+- Phase 17-2: AS(ilw=0.3, 0.6866), AT(ilw=1.0, 0.6759) — AS AUC 소폭 개선이나 IEB 급증
+- Phase 17-3: SKIPPED (17-1/2 모두 AL 대비 IEB 악화, 추가 탐색 불필요)
+
+**Phase 18: External Win PS — Run AW WCTR AUC 0.6882 (ESCM2-WC best AUC)**
+- AW(AL+Ext PS): WCTR AUC **0.6882** (+0.004 vs AL), CTR AUC 0.5713, IEB 0.045
+- AV(Run J cfg+Ext PS): WCTR AUC 0.6712 — ctr_weight=0.0이 DR 전파를 차단
+- External PS Train AUC 0.93 → Test AUC 0.65: temporal shift로 PS 품질 급감
+
+**최종 모델 선택:**
+- **Calibration best**: Run AL (WCTR ECE 0.000003, IEB 0.014) — bid price calibration 중시
+- **AUC best**: Run AW (WCTR AUC 0.6882, IEB 0.045) — ranking 중시
+- ESMM-WC Run J(WCTR 0.6905)에 근접하면서 calibration 압도적 우위 (IEB 95x 개선)
+
 ### Scripts Tutorial Update (2026-02-26)
 - **문서 갱신**: `docs/scripts_tutorial.md` — 전 CLI flags, training output, W&B, Sweep, Distributed training 문서화
 - **esmmwc**: 8→21 flags (13 추가: learning-rate, dropout, eval-every, quiet, distributed×6, wandb×3)
@@ -781,7 +806,7 @@ python scripts/train.py evaluate \
 4. ~~Add Ray parallelization to data pipeline~~ → ✅ Complete (2026-02-06)
 5. ~~Run EDA and selection bias diagnosis on real data~~ → ✅ Complete (2026-02-09)
 6. ~~ESMM-WC + ESCM²-WC 구현~~ → ✅ Complete (2026-02-17, Bid→Win→Click reframe)
-7. ~~Implement ablation study~~ (Task 2.3) — Phase 1-16 완료. ESMM-WC Run J (WCTR 0.6905) AUC best, ESCM2-WC(DR) Run AL (WCTR 0.6843) calibration best (WCTR IEB 0.014). 결과 해석 섹션 추가 완료 (`docs/performance_tuning.md` Section 7, 10)
+7. ~~Implement ablation study~~ (Task 2.3) — Phase 1-18 완료. ESMM-WC Run J (WCTR 0.6905) AUC best overall, ESCM2-WC(DR) Run AW (WCTR 0.6882) ESCM2 best AUC + External PS, Run AL (WCTR 0.6843) calibration best (IEB 0.014). `docs/performance_tuning.md` Section 7, 10 업데이트
 8. ~~통합 평가 모듈 생성~~ → ✅ Complete (2026-03-13~16, `src/metrics/` 모듈 + `notebooks/03_prediction.ipynb` 재구성. Section 5 고도화 + Section 8-12 → Appendix A-C 재구성, 중복 섹션 삭제)
 9. **Win rate analysis** (Task 2.3.5) — SP2, market price CDF 추정 → SP3 입력
 10. **Bid optimization** (Task 2.4) — V(x) = debiased_pCTR × CPC, Win Tower → bid shading

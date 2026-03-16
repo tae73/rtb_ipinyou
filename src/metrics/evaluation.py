@@ -8,6 +8,32 @@ from typing import NamedTuple, Optional
 import numpy as np
 
 
+def _numpy_roc_auc(y_true: np.ndarray, y_score: np.ndarray) -> float:
+    """Pure numpy ROC AUC using the Mann-Whitney U statistic."""
+    y_true = np.asarray(y_true, dtype=np.intp)
+    y_score = np.asarray(y_score, dtype=np.float64)
+    n1 = int(y_true.sum())
+    n0 = len(y_true) - n1
+    if n1 == 0 or n0 == 0:
+        raise ValueError("Only one class present in y_true.")
+    order = np.argsort(y_score)
+    ranks = np.empty(len(y_true), dtype=np.float64)
+    ranks[order] = np.arange(1, len(y_true) + 1, dtype=np.float64)
+    # Tie correction
+    sorted_scores = y_score[order]
+    i = 0
+    while i < len(sorted_scores):
+        j = i + 1
+        while j < len(sorted_scores) and sorted_scores[j] == sorted_scores[i]:
+            j += 1
+        if j > i + 1:
+            avg_rank = (i + 1 + j) / 2.0
+            for k in range(i, j):
+                ranks[order[k]] = avg_rank
+        i = j
+    return float((ranks[y_true == 1].sum() - n1 * (n1 + 1) / 2) / (n1 * n0))
+
+
 class EvalMetrics(NamedTuple):
     """Evaluation metrics."""
     auc: float
@@ -86,15 +112,6 @@ def compute_metrics(
     Returns:
         EvalMetrics
     """
-    from sklearn.metrics import (
-        roc_auc_score,
-        log_loss,
-        accuracy_score,
-        precision_score,
-        recall_score,
-        f1_score,
-    )
-
     # Filter out NaN
     mask = ~np.isnan(y_pred) & ~np.isnan(y_true)
     y_true = y_true[mask]
@@ -103,21 +120,28 @@ def compute_metrics(
     # Clip predictions for log_loss
     y_pred_clipped = np.clip(y_pred, 1e-7, 1 - 1e-7)
 
-    # Compute metrics
+    # AUC (pure numpy, ranking-based)
     try:
-        auc = roc_auc_score(y_true, y_pred)
+        auc = _numpy_roc_auc(y_true, y_pred)
     except ValueError:
         auc = 0.5  # Fallback if all same class
 
-    logloss = log_loss(y_true, y_pred_clipped)
+    # Log loss (pure numpy)
+    logloss = float(-np.mean(
+        y_true * np.log(y_pred_clipped) + (1 - y_true) * np.log(1 - y_pred_clipped)
+    ))
 
     # Binary predictions
     y_pred_binary = (y_pred >= threshold).astype(int)
 
-    accuracy = accuracy_score(y_true, y_pred_binary)
-    precision = precision_score(y_true, y_pred_binary, zero_division=0)
-    recall = recall_score(y_true, y_pred_binary, zero_division=0)
-    f1 = f1_score(y_true, y_pred_binary, zero_division=0)
+    # Classification metrics (pure numpy)
+    tp = np.sum((y_pred_binary == 1) & (y_true == 1))
+    fp = np.sum((y_pred_binary == 1) & (y_true == 0))
+    fn = np.sum((y_pred_binary == 0) & (y_true == 1))
+    accuracy = float(np.mean(y_pred_binary == y_true))
+    precision = float(tp / (tp + fp)) if (tp + fp) > 0 else 0.0
+    recall = float(tp / (tp + fn)) if (tp + fn) > 0 else 0.0
+    f1 = float(2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
 
     # Expected Calibration Error (ECE)
     ece = compute_ece(y_true, y_pred)
