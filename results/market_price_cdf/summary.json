@@ -1,0 +1,27 @@
+{
+  "km_median_overall": null,
+  "km_f300_overall": 0.2131967966374014,
+  "exchange_medians": {
+    "1": 153.0,
+    "2": null,
+    "3": null
+  },
+  "exchange_f300": {
+    "1": 0.6879563894853683,
+    "2": 0.2905927877742605,
+    "3": 0.11947584174983206
+  },
+  "market_price_stats": {
+    "mean": 78.05264416605283,
+    "median": 68.0,
+    "std": 59.44598936638833,
+    "p25": 36.0,
+    "p75": 93.0,
+    "p90": 166.0,
+    "p95": 214.0,
+    "floor_binding_rate": 0.20774580482702049
+  },
+  "best_parametric": "lognormal",
+  "temporal_ks": 0.11757452969930249,
+  "overall_win_rate": 0.20988718595113567
+}

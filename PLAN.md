@@ -1,6 +1,6 @@
 # RTB iPinYou Project Progress Tracking
 
-**Last Updated**: 2026-03-16 (Phase 20 Target Encoding — 가설 기각, WCTR AUC 0.5480 vs J 0.6905)
+**Last Updated**: 2026-03-17 (Notebook 05: Win Rate Analysis & Market Price CDF 완료)
 
 ## Project Overview
 
@@ -26,7 +26,7 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 | Phase | Status | Progress |
 |-------|--------|----------|
 | Phase 1: MVP | ✅ Complete | 100% |
-| Phase 2: Debiasing | 🔄 In Progress | 65% |
+| Phase 2: Debiasing | 🔄 In Progress | 75% |
 | Phase 3: Causal & Serving | ⏳ Not Started | 0% |
 
 ---
@@ -122,7 +122,7 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 - [x] `docs/performance_tuning.md`: Phase 20 결과 기록 완료
 
 ### Task 2.3: Ablation Study
-- [ ] `notebooks/04_prediction_debiasing.ipynb`
+- [x] `notebooks/04_prediction_debiasing.ipynb` — DR 메커니즘 이론 + CFR/ExtPS/IPW-DR ablation + Negative results
 - [ ] `experiments/configs/prediction_debiasing.yaml`
 
 **Ablation Structure (Bid→Win→Click reframe):**
@@ -137,15 +137,17 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 - Key metrics: Win AUC, CTR AUC (biased + IPW-unbiased), Joint AUC, ECE, IEB
 - Expected: Biased → ESMM-WC → ESCM²-WC(DR) 순차적 개선
 
-### Task 2.3.5: Win Rate 분석 (SP2) — SP3 입력
-- [ ] `src/win_rate/nonparametric.py`
-- [ ] `src/win_rate/survival.py`
-- [ ] `notebooks/05_win_rate_analysis.ipynb`
-- [ ] `notebooks/06_market_price_estimation.ipynb`
+### Task 2.3.5: Win Rate 분석 (SP2) — SP3 입력 ✅ Complete
+- [x] `src/win_rate/nonparametric.py`: Wilson CI, empirical win rate curve, market price stats, serving lookup
+- [x] `src/win_rate/survival.py`: KM CDF, parametric fit (Weibull/LogNormal/Exponential), segment CDF
+- [x] `notebooks/05_win_rate_market_price.ipynb`: NB05+NB06 통합 — 10 sections, 8 figures
+- [x] `pyproject.toml`: lifelines>=0.29.0 의존성 추가
+- [x] `results/market_price_cdf/`: KM CDF export (overall + exchange-conditional .npz + summary.json)
 
 **SP2 → SP3 연결:**
 - Market price CDF 추정 → bid shading 입력
 - Win Tower (SP1) + market price CDF (SP2) → bid shading shade(x) (SP3)
+- **SP3 Shade Demo**: V(x)=200 CPM → optimal bid=89 CPM (shade=44.6%), surplus=17.2 CPM
 
 ### Task 2.4: Bid Optimization (SP3) ⬆️ Elevated Priority
 - [ ] `src/bidding/value.py`
@@ -219,7 +221,7 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 | 01_eda_analysis | ✅ | EDA + Floor Price/Ad Format/Geographic/Publisher 분석 + Conversion Attribution. Slow usertag cells (Ray parsing, chunked agg) 제거 — summary markdown만 유지 |
 | 02_selection_bias_diagnosis | ✅ | Bias quantification |
 | 03_prediction_baseline | ✅ | LightGBM baseline |
-| 04_prediction_debiasing | ⏳ | Debiasing comparison |
+| 04_prediction_debiasing | ✅ | DR 메커니즘 이론 + Component ablation (CFR, ExtPS) + Negative results + AUC-Calibration trade-off |
 
 ### Documentation
 | Doc | Path | Description |
@@ -315,6 +317,25 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 - **Bid shading**: LR CTR_all 기반 V(x) 분석 추가 (well-calibrated, AUC 0.78)
 - **LR CTR vs CTR_all 격차 근본 원인**: 동일 13K positives, 다른 negatives — CTR_all의 71.6M lost bids가 "easy negatives"로 작용. Top features sign reversal (adexchange #1 양측 반대 방향). Contextual features (adexchange, temporal) anchor → task separability 결정적
 - **Limitation**: CTR baseline은 winners only에서 학습 (win selection bias) — flat-bid → 저경쟁 인벤토리 과대표
+
+### Notebook 04: DR 메커니즘 + Ablation Study (2026-03-17)
+- **DR Unbiasedness**: Toy simulation (10K samples, 100 reps) — Naive bias +0.06, IPW/DR ~0 (DR lower variance)
+- **ESMM-WC vs ESCM2-WC(DR)**: J(WCTR AUC 0.6905, IEB 1.335) vs AL(0.6843, IEB 0.014) — AUC -0.006 but **IEB 95x 개선**
+- **CFR Lambda Ablation**: 0.0(0.6638) < 0.1(0.6766) < **0.2(0.6843, IEB 0.014)** > 0.3(0.6841, IEB 0.114) > 0.5(0.6774, IEB 0.105). cfr=0.2 sweet spot
+- **External PS**: AW(AL+ExtPS) WCTR AUC 0.6882 (+0.004 vs AL), IEB 0.045 (+0.031) — AUC-Calibration trade-off
+- **Negative Results**: Per-tower dropout(AM, -0.047 AUC), Checkpoint averaging(AP, -0.012), Huber imputation(AJ, -0.018)
+- **Figures**: 8 figures saved to `results/figures/04_*.png`
+
+### Notebook 05: Win Rate Analysis & Market Price CDF (2026-03-17)
+- **Flat Bidding**: iPinYou uses only 6 discrete bid prices (227–300 CPM). Cross-advertiser pooling required for win rate analysis.
+- **KM Market Price CDF**: True median > 300 CPM (unidentifiable, S(300)=0.79). F(300) ≈ 21.3% ≈ overall WR — KM well-calibrated.
+- **Exchange-Conditional**: Ex1 F(300)=68.8% (median 153 CPM), Ex2 F(300)=29.1%, Ex3 F(300)=11.9% — exchange-conditional shading essential
+- **Market Price Stats (winners)**: Mean 78, Median 68, P90 166, P95 214 CPM. Floor binding 20.8%.
+- **Parametric Fit**: LogNormal best AIC/BIC (mu=7.93, sigma=2.52). Weibull 2nd, Exponential worst.
+- **Temporal Drift**: S2→S3 KS=0.118 on pay prices — market shifted rightward, re-estimation needed.
+- **SP3 Shade Demo**: V(x)=200 → optimal bid=89 CPM (shade=44.6%), surplus=17.2 CPM.
+- **Modules**: `src/win_rate/nonparametric.py` (Wilson CI, empirical curves, lookup), `src/win_rate/survival.py` (KM, parametric, segment CDF)
+- **Figures**: 8 figures `results/figures/05_*.png`, CDF export `results/market_price_cdf/`
 
 ### Notebook 03 Refactor + LGB Hyperparameter 개선 (2026-02-23)
 - **`scripts/train.py`**: LGB params 개선 — `n_estimators=300`, `min_child_samples=50`, `subsample=0.8`, `feature_fraction=0.8`, `early_stopping=30`
@@ -808,7 +829,7 @@ python scripts/train.py evaluate \
 6. ~~ESMM-WC + ESCM²-WC 구현~~ → ✅ Complete (2026-02-17, Bid→Win→Click reframe)
 7. ~~Implement ablation study~~ (Task 2.3) — Phase 1-18 완료. ESMM-WC Run J (WCTR 0.6905) AUC best overall, ESCM2-WC(DR) Run AW (WCTR 0.6882) ESCM2 best AUC + External PS, Run AL (WCTR 0.6843) calibration best (IEB 0.014). `docs/performance_tuning.md` Section 7, 10 업데이트
 8. ~~통합 평가 모듈 생성~~ → ✅ Complete (2026-03-13~16, `src/metrics/` 모듈 + `notebooks/03_prediction.ipynb` 재구성. Section 5 고도화 + Section 8-12 → Appendix A-C 재구성, 중복 섹션 삭제)
-9. **Win rate analysis** (Task 2.3.5) — SP2, market price CDF 추정 → SP3 입력
+9. ~~Win rate analysis~~ (Task 2.3.5) → ✅ Complete (2026-03-17, NB05+NB06 통합, KM CDF + parametric fit + exchange-conditional, `src/win_rate/` 모듈)
 10. **Bid optimization** (Task 2.4) — V(x) = debiased_pCTR × CPC, Win Tower → bid shading
 11. ~~Research design docs 업데이트~~ → ✅ Complete (Bid→Win→Click reframe 2026-02-17, EDA findings 반영 2026-02-19)
 12. ~~Distributed training infrastructure~~ → ✅ Complete (2026-02-25, JAX SPMD + grain DataLoader + orbax checkpoint)
