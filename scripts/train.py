@@ -1998,6 +1998,18 @@ def _train_wc_model(
     test_pred = predict_batched_grain(test_source, data_sharding)
     val_pred = predict_batched_grain(val_source, data_sharding)
 
+    # Save per-sample test predictions (.npz) for diagnostics plots
+    pred_path = model_dir / f"{model_name}_test_predictions.npz"
+    np.savez_compressed(
+        pred_path,
+        p_win=test_pred["p_win"].astype(np.float32),
+        p_ctr=test_pred["p_ctr"].astype(np.float32),
+        p_click_bid=test_pred["p_click_bid"].astype(np.float32),
+        y_win=test_df["win"].values.astype(np.int8),
+        y_click=test_df["click"].values.astype(np.int8),
+    )
+    typer.echo(f"Test predictions saved: {pred_path}")
+
     # Win AUC (all bids)
     win_auc_test = compute_metrics(
         test_df["win"].values, test_pred["p_win"]

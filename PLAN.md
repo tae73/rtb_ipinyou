@@ -1,6 +1,6 @@
 # RTB iPinYou Project Progress Tracking
 
-**Last Updated**: 2026-03-17 (Notebook 05: Win Rate Analysis & Market Price CDF 완료)
+**Last Updated**: 2026-03-19 (3-panel diagnostics figure 인프라 추가: diagnostics_plot.py, train.py .npz 저장, NB03/04 리팩터, 리포트 Figure 11 삽입)
 
 ## Project Overview
 
@@ -64,6 +64,8 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 - [x] `src/metrics/evaluation.py`: Core metric functions (compute_ece, compute_ieb, compute_metrics, EvalMetrics)
 - [x] `src/metrics/result_loader.py`: JSON result loading + UnifiedMetrics normalization
 - [x] `src/metrics/comparison.py`: Comparison table generation + highlight_best
+- [x] `src/metrics/diagnostics_plot.py`: 3-panel prediction diagnostics (Calibration + ROC + Score Distribution)
+- [x] `scripts/train.py`: Per-sample test predictions `.npz` 저장 (재학습 시 자동 생성)
 
 ### Task 1.4: Feature Ablation (Partially Complete)
 - [x] `domain` feature 추가: 108K domains → hash encoding (10K buckets) + frequency encoding (freq + freq_log)
@@ -140,14 +142,16 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 ### Task 2.3.5: Win Rate 분석 (SP2) — SP3 입력 ✅ Complete
 - [x] `src/win_rate/nonparametric.py`: Wilson CI, empirical win rate curve, market price stats, serving lookup
 - [x] `src/win_rate/survival.py`: KM CDF, parametric fit (Weibull/LogNormal/Exponential), segment CDF
-- [x] `notebooks/05_win_rate_market_price.ipynb`: NB05+NB06 통합 — 10 sections, 8 figures
+- [x] `notebooks/05_win_rate_market_price.ipynb`: NB05+NB06 통합 — 11 sections, 9 figures
 - [x] `pyproject.toml`: lifelines>=0.29.0 의존성 추가
 - [x] `results/market_price_cdf/`: KM CDF export (overall + exchange-conditional .npz + summary.json)
+- [x] Section 11 (NEW): Calibration 경제적 가치 분석 — IEB → V(x) → optimal bid → surplus 비교, exchange-conditional surplus loss
+- [x] Section 11 확장: LR CTR_all (IEB 0.122) + LGB CTR (IEB 0.362) baseline 추가 → 5-model surplus 비교, Figure 14 재생성
 
 **SP2 → SP3 연결:**
 - Market price CDF 추정 → bid shading 입력
 - Win Tower (SP1) + market price CDF (SP2) → bid shading shade(x) (SP3)
-- **SP3 Shade Demo**: V(x)=200 CPM → optimal bid=89 CPM (shade=44.6%), surplus=17.2 CPM
+- **Calibration 경제적 가치**: ESCM²-WC(DR) AL (IEB 0.014) → oracle-matching surplus, LR CTR_all (IEB 0.122) → 2.2% 손실 (8.7× overbid), LGB CTR (IEB 0.362) → 2.2% 손실 (25.9× overbid), ESMM-WC J (IEB 1.335) → 14.7% 손실 (95× overbid). AUC best (LR 0.7687) ≠ bidding best
 
 ### Task 2.4: Bid Optimization (SP3) ⬆️ Elevated Priority
 - [ ] `src/bidding/value.py`
@@ -220,8 +224,8 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 | 00_data_preparation | ✅ | Data pipeline demo |
 | 01_eda_analysis | ✅ | EDA + Floor Price/Ad Format/Geographic/Publisher 분석 + Conversion Attribution. Slow usertag cells (Ray parsing, chunked agg) 제거 — summary markdown만 유지 |
 | 02_selection_bias_diagnosis | ✅ | Bias quantification |
-| 03_prediction_baseline | ✅ | LightGBM baseline |
-| 04_prediction_debiasing | ✅ | DR 메커니즘 이론 + Component ablation (CFR, ExtPS) + Negative results + AUC-Calibration trade-off |
+| 03_prediction_baseline | ✅ | LightGBM baseline + 3-panel diagnostics (LGB CTR, LR CTR_all) |
+| 04_prediction_debiasing | ✅ | DR 메커니즘 이론 + Component ablation (CFR, ExtPS) + Negative results + AUC-Calibration trade-off + Section 11 Neural diagnostics |
 
 ### Documentation
 | Doc | Path | Description |
@@ -230,6 +234,7 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 | Feature Dictionary | `docs/feature_dictionary.md` | Feature별 what/why/how 상세 레퍼런스 |
 | RTB Ecosystem | `docs/rtb_ecosystem.md` | RTB 생태계 구조 & 경매 메커니즘 (SP3 도메인 배경) |
 | Research Design | `docs/research_design/` | SP0-SP5 research docs |
+| **Prediction Report** | `docs/prediction_report.md` | **포트폴리오 수준 연구 보고서 (778줄, 18 figures, 6 sections + 부록)** |
 
 ### iPinYou Data Schema
 - **Bid Log**: 21 columns (bidid, timestamp, ipinyouid, useragent, ip, region, city, adexchange, domain, url, urlid, slotid, slotwidth, slotheight, slotvisibility, slotformat, slotprice, creative, bidprice, advertiser, usertag)
@@ -334,8 +339,9 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 - **Parametric Fit**: LogNormal best AIC/BIC (mu=7.93, sigma=2.52). Weibull 2nd, Exponential worst.
 - **Temporal Drift**: S2→S3 KS=0.118 on pay prices — market shifted rightward, re-estimation needed.
 - **SP3 Shade Demo**: V(x)=200 → optimal bid=89 CPM (shade=44.6%), surplus=17.2 CPM.
+- **Calibration Economic Value (5-model)**: AL(IEB 0.014) → oracle surplus, AW(0.045) → ~0%, LR CTR_all(0.122) → -2.2%, LGB CTR(0.362) → -2.2%, ESMM-WC J(1.335) → -14.7%. Ex1: LGB -8.2%, J -42%. AUC best (LR 0.7687) ≠ bidding best.
 - **Modules**: `src/win_rate/nonparametric.py` (Wilson CI, empirical curves, lookup), `src/win_rate/survival.py` (KM, parametric, segment CDF)
-- **Figures**: 8 figures `results/figures/05_*.png`, CDF export `results/market_price_cdf/`
+- **Figures**: 9 figures `results/figures/05_*.png` (05_calibration_economic_value.png 5-model 재생성), CDF export `results/market_price_cdf/`
 
 ### Notebook 03 Refactor + LGB Hyperparameter 개선 (2026-02-23)
 - **`scripts/train.py`**: LGB params 개선 — `n_estimators=300`, `min_child_samples=50`, `subsample=0.8`, `feature_fraction=0.8`, `early_stopping=30`

@@ -1,4 +1,4 @@
-"""Metrics modules — evaluation, result loading, and comparison."""
+"""Metrics modules — evaluation, result loading, comparison, and diagnostics."""
 
 from .evaluation import EvalMetrics, compute_ece, compute_ieb, compute_metrics
 from .result_loader import (
@@ -9,6 +9,7 @@ from .result_loader import (
     normalize_to_unified,
 )
 from .comparison import build_comparison_table, highlight_best
+from .diagnostics_plot import DiagnosticsPlotConfig, plot_prediction_diagnostics
 
 __all__ = [
     "EvalMetrics",
@@ -22,4 +23,6 @@ __all__ = [
     "normalize_to_unified",
     "build_comparison_table",
     "highlight_best",
+    "DiagnosticsPlotConfig",
+    "plot_prediction_diagnostics",
 ]
