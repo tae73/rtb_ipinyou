@@ -1,6 +1,6 @@
 # RTB iPinYou Project Progress Tracking
 
-**Last Updated**: 2026-03-19 (3-panel diagnostics figure 인프라 추가: diagnostics_plot.py, train.py .npz 저장, NB03/04 리팩터, 리포트 Figure 11 삽입)
+**Last Updated**: 2026-03-19 (Next Steps #10 추가: Neural 모델 재학습 + Diagnostics Figure 생성 계획)
 
 ## Project Overview
 
@@ -330,6 +330,14 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 - **External PS**: AW(AL+ExtPS) WCTR AUC 0.6882 (+0.004 vs AL), IEB 0.045 (+0.031) — AUC-Calibration trade-off
 - **Negative Results**: Per-tower dropout(AM, -0.047 AUC), Checkpoint averaging(AP, -0.012), Huber imputation(AJ, -0.018)
 - **Figures**: 8 figures saved to `results/figures/04_*.png`
+
+### Neural 모델 재학습 + Diagnostics (2026-03-22)
+- **ESMM-WC (Run J 재학습)**: Test WCTR AUC 0.6527, IEB 0.075. Val CTR AUC 0.706 (best epoch 5/10)
+- **ESCM²-WC(DR) (Run AL 재학습)**: Test WCTR AUC 0.6851, IEB 0.073. Val CTR AUC 0.709 (best epoch 5/10)
+- **ESCM²-WC(DR)+ExtPS (Run AW 재학습)**: Test WCTR AUC 0.6837, IEB 0.045. Val CTR AUC 0.709 (best epoch 5/10)
+- **ExtPS suffix 수정**: `train.py` model_name에 `_extps` suffix 추가 — ExtPS 결과 파일 분리
+- **Diagnostics figures**: 4개 3-panel plots 생성 (LR CTR_all AUC 0.769, Neural 3개)
+- **prediction_report.md**: Figure 11-14 추가 (ESCM2-DR, ESMM-WC, ExtPS, LR CTR_all)
 
 ### Notebook 05: Win Rate Analysis & Market Price CDF (2026-03-17)
 - **Flat Bidding**: iPinYou uses only 6 discrete bid prices (227–300 CPM). Cross-advertiser pooling required for win rate analysis.
@@ -836,11 +844,18 @@ python scripts/train.py evaluate \
 7. ~~Implement ablation study~~ (Task 2.3) — Phase 1-18 완료. ESMM-WC Run J (WCTR 0.6905) AUC best overall, ESCM2-WC(DR) Run AW (WCTR 0.6882) ESCM2 best AUC + External PS, Run AL (WCTR 0.6843) calibration best (IEB 0.014). `docs/performance_tuning.md` Section 7, 10 업데이트
 8. ~~통합 평가 모듈 생성~~ → ✅ Complete (2026-03-13~16, `src/metrics/` 모듈 + `notebooks/03_prediction.ipynb` 재구성. Section 5 고도화 + Section 8-12 → Appendix A-C 재구성, 중복 섹션 삭제)
 9. ~~Win rate analysis~~ (Task 2.3.5) → ✅ Complete (2026-03-17, NB05+NB06 통합, KM CDF + parametric fit + exchange-conditional, `src/win_rate/` 모듈)
-10. **Bid optimization** (Task 2.4) — V(x) = debiased_pCTR × CPC, Win Tower → bid shading
-11. ~~Research design docs 업데이트~~ → ✅ Complete (Bid→Win→Click reframe 2026-02-17, EDA findings 반영 2026-02-19)
-12. ~~Distributed training infrastructure~~ → ✅ Complete (2026-02-25, JAX SPMD + grain DataLoader + orbax checkpoint)
-13. ~~Neural model smoke test~~ → ✅ Complete (2026-02-25, 3 models × 200K × 2 epochs, Flax 0.12 API fix)
-14. ~~Synthetic data sanity test~~ → ✅ Complete (2026-02-26, 3 models × 50K × 50 epochs, Win/CTR AUC ≥ 0.8)
+10. ~~Neural 모델 재학습 + Diagnostics Figure 생성~~ → ✅ Complete (2026-03-22)
+    - [x] ESMM-WC 재학습 (Run J config) → `esmmwc_test_predictions.npz` (Test WCTR AUC 0.6527, IEB 0.075)
+    - [x] ESCM²-WC(DR) 재학습 (Run AL config) → `escm2wc_dr_test_predictions.npz` (Test WCTR AUC 0.6851, IEB 0.073)
+    - [x] ESCM²-WC(DR)+ExtPS 재학습 (Run AW config) → `escm2wc_dr_extps_test_predictions.npz` (Test WCTR AUC 0.6837, IEB 0.045)
+    - [x] LR CTR_all 3-panel diagnostics figure 생성 → `03_lr_ctr_all_diagnostics.png` (AUC 0.7687)
+    - [x] Neural model diagnostics figures 생성 → `04_esmmwc_diagnostics.png`, `04_escm2wc_dr_diagnostics.png`, `04_escm2wc_dr_extps_diagnostics.png`
+    - [x] `docs/prediction_report.md` Figure 11-14 경로 확인 및 추가 완료
+11. **Bid optimization** (Task 2.4) — V(x) = debiased_pCTR × CPC, Win Tower → bid shading
+12. ~~Research design docs 업데이트~~ → ✅ Complete (Bid→Win→Click reframe 2026-02-17, EDA findings 반영 2026-02-19)
+13. ~~Distributed training infrastructure~~ → ✅ Complete (2026-02-25, JAX SPMD + grain DataLoader + orbax checkpoint)
+14. ~~Neural model smoke test~~ → ✅ Complete (2026-02-25, 3 models × 200K × 2 epochs, Flax 0.12 API fix)
+15. ~~Synthetic data sanity test~~ → ✅ Complete (2026-02-26, 3 models × 50K × 50 epochs, Win/CTR AUC ≥ 0.8)
 
 ---
 

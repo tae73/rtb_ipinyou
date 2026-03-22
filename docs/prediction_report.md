@@ -382,7 +382,16 @@ cfr_lambda=0.2가 imputation tower의 과적합을 억제하면서 DR correction
 *Figure 10: CFR lambda ablation. 0.2에서 AUC와 IEB의 최적 균형을 달성한다.*
 
 ![ESCM2-WC(DR) Prediction Diagnostics](../results/figures/04_escm2wc_dr_diagnostics.png)
-*Figure 11: ESCM²-WC(DR) Run AL prediction diagnostics. (Left) Calibration — IEB 0.014에 부합하는 near-perfect calibration. (Center) WCTR AUC 0.6843. (Right) Score distribution.*
+*Figure 11: ESCM²-WC(DR) Run AL prediction diagnostics. (Left) Calibration — quantile-binned calibration curve. (Center) WCTR AUC 0.6851. (Right) Score distribution.*
+
+![ESMM-WC Prediction Diagnostics](../results/figures/04_esmmwc_diagnostics.png)
+*Figure 12: ESMM-WC (Run J) prediction diagnostics. WCTR AUC 0.6527.*
+
+![ESCM2-WC(DR)+ExtPS Prediction Diagnostics](../results/figures/04_escm2wc_dr_extps_diagnostics.png)
+*Figure 13: ESCM²-WC(DR)+ExtPS (Run AW) prediction diagnostics. WCTR AUC 0.6837, WCTR IEB 0.045.*
+
+![LR CTR_all Prediction Diagnostics](../results/figures/03_lr_ctr_all_diagnostics.png)
+*Figure 14: LR CTR_all (all bids) prediction diagnostics. AUC 0.7687 — 전체 bids 대상 linear baseline.*
 
 ### 3.4 Negative Results
 

@@ -1700,6 +1700,8 @@ def _train_wc_model(
 
     # Model name (used for W&B run name and result JSON)
     model_name = model_type if model_type == "esmmwc" else f"escm2wc_{debiasing}"
+    if use_external_propensity:
+        model_name += "_extps"
 
     # W&B init (conditional) — sweep agent may provide pre-initialized run
     _wandb_run_provided = wandb_run is not None
