@@ -118,14 +118,6 @@ S2(2013.06) → S3(2013.10) ~4개월 gap의 temporal shift (KS=0.1294)가 모든
 - 20단계 튜닝에서 regularization/architecture 변경 모두 **해결 불가**
 - **LR만 temporal-robust** (linear model의 낮은 complexity)
 
-### 4. CFR Lambda = 0.2 Sweet Spot
-
-| cfr_lambda | WCTR AUC | WCTR IEB | 비고 |
-|-----------|----------|----------|------|
-| 0.0 | 0.6638 | — | Imputation overfitting |
-| **0.2** | **0.6843** | **0.014** | **Sweet spot** |
-| 0.5 | 0.6774 | 0.105 | Over-regularization |
-
 ---
 
 ## Methodology
@@ -229,9 +221,6 @@ Propensity 또는 imputation 중 하나만 올바르면 일치성 보장 (doubly
 
 ![Debiasing Ablation](../results/figures/04_debiasing_ablation_ladder.png)
 *Debiasing ablation ladder. Multi-task 모델이 biased baseline 대비 AUC + calibration 모두 개선.*
-
-![AUC vs Calibration](../results/figures/04_auc_vs_calibration_tradeoff.png)
-*AUC vs Calibration trade-off. Run AL (AUC best) vs Run AW (IEB best).*
 
 ### Calibration의 경제적 가치
 
