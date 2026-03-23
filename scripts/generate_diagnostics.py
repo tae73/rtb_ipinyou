@@ -1,8 +1,9 @@
-"""Generate 3-panel diagnostics figures for LR and Neural models."""
+"""Generate 3-panel diagnostics figures for LGB, LR and Neural models."""
 
 from pathlib import Path
 
 import joblib
+import lightgbm as lgb
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -16,6 +17,37 @@ FEATURES_DIR = Path("data/ipinyou/prediction/features")
 MODEL_DIR = Path("results/models")
 FIG_DIR = Path("results/figures")
 FIG_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def generate_lgb_diagnostics() -> None:
+    """LGB CTR (winners-only) 3-panel diagnostics."""
+    lgb_path = MODEL_DIR / "lgb_ctr.txt"
+    if not lgb_path.exists():
+        print(f"[SKIP] {lgb_path} not found")
+        return
+
+    _, _, test_df, metadata = load_feature_splits(FEATURES_DIR)
+    model = lgb.Booster(model_file=str(lgb_path))
+
+    feature_info = metadata.get("feature_info", {})
+    feature_cols = feature_info.get("categorical", []) + feature_info.get("numerical", [])
+    feature_cols = [c for c in feature_cols if c in test_df.columns]
+
+    # Winners only
+    won_mask = test_df["win"] == 1
+    X_test = test_df.loc[won_mask, feature_cols]
+    y_test = test_df.loc[won_mask, "click"].values
+    lgb_pred = model.predict(X_test)
+
+    save_path = FIG_DIR / "03_lgb_ctr_diagnostics.png"
+    plot_prediction_diagnostics(y_test, lgb_pred, "LGB CTR (winners only)", save_path=save_path)
+    plt.close()
+    # Also overwrite legacy notebook path (Figure 5 in prediction_report.md)
+    legacy_path = FIG_DIR / "03_prediction_baseline_calibration.png"
+    plot_prediction_diagnostics(y_test, lgb_pred, "LGB CTR (winners only)", save_path=legacy_path)
+    plt.close()
+    auc = roc_auc_score(y_test, lgb_pred)
+    print(f"LGB CTR — AUC: {auc:.4f}, saved: {save_path}, {legacy_path}")
 
 
 def generate_lr_diagnostics() -> None:
@@ -72,7 +104,9 @@ def generate_neural_diagnostics() -> None:
 
 
 if __name__ == "__main__":
-    print("=== LR CTR_all Diagnostics ===")
+    print("=== LGB CTR Diagnostics ===")
+    generate_lgb_diagnostics()
+    print("\n=== LR CTR_all Diagnostics ===")
     generate_lr_diagnostics()
     print("\n=== Neural Model Diagnostics ===")
     generate_neural_diagnostics()

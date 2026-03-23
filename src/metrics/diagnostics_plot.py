@@ -43,8 +43,13 @@ def plot_prediction_diagnostics(
     prob_true, prob_pred = calibration_curve(
         y_true, y_pred, strategy=config.cal_strategy, n_bins=config.n_cal_bins
     )
-    ax.plot(prob_pred, prob_true, "o-", label="Model")
-    ax.plot([0, 1], [0, 1], "k--", label="Perfect calibration")
+    ece = float(np.mean(np.abs(prob_true - prob_pred)))
+    ax.plot(prob_pred, prob_true, "o-", label=f"Model (ECE={ece:.6f})")
+    # Auto-zoom: reference line & axes to data range (extreme class imbalance)
+    xy_max = max(prob_pred.max(), prob_true.max()) * 1.15
+    ax.plot([0, xy_max], [0, xy_max], "k--", label="Perfect calibration")
+    ax.set_xlim(0, xy_max)
+    ax.set_ylim(0, xy_max)
     ax.set_xlabel("Mean Predicted Probability")
     ax.set_ylabel("Fraction of Positives")
     ax.set_title(f"Calibration ({config.cal_strategy} bins)")
