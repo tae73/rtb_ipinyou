@@ -11,7 +11,7 @@ import numpy as np
 from sklearn.metrics import roc_auc_score
 
 from src.features.engineering import load_feature_splits
-from src.metrics.diagnostics_plot import plot_prediction_diagnostics
+from src.metrics.diagnostics_plot import plot_comparison_diagnostics, plot_prediction_diagnostics
 
 FEATURES_DIR = Path("data/ipinyou/prediction/features")
 MODEL_DIR = Path("results/models")
@@ -103,6 +103,63 @@ def generate_neural_diagnostics() -> None:
         print(f"{name} — AUC: {auc:.4f}, saved: {save_path}")
 
 
+def generate_comparison_diagnostics() -> None:
+    """LGB (won) vs LR (all) vs ESCM²-WC(DR) (all) comparison diagnostics."""
+    lgb_path = MODEL_DIR / "lgb_ctr.txt"
+    lr_path = MODEL_DIR / "lr_ctr_all.joblib"
+    escm2_path = MODEL_DIR / "escm2wc_dr_test_predictions.npz"
+
+    missing = [p for p in [lgb_path, lr_path, escm2_path] if not p.exists()]
+    if missing:
+        print(f"[SKIP] Missing: {[str(p) for p in missing]}")
+        return
+
+    _, _, test_df, metadata = load_feature_splits(FEATURES_DIR)
+    y_all = test_df["click"].values
+    won_mask = test_df["win"].values == 1
+
+    # LGB CTR — winners-only (biased baseline, its natural eval context)
+    feature_info = metadata.get("feature_info", {})
+    feature_cols = feature_info.get("categorical", []) + feature_info.get("numerical", [])
+    feature_cols = [c for c in feature_cols if c in test_df.columns]
+    lgb_model = lgb.Booster(model_file=str(lgb_path))
+    lgb_y = test_df.loc[won_mask, "click"].values
+    lgb_pred = lgb_model.predict(test_df.loc[won_mask, feature_cols])
+
+    # LR CTR_all — all-bids
+    artifact = joblib.load(lr_path)
+    lr_model = artifact["model"]
+    scaler = artifact["scaler"]
+    lr_feature_cols = artifact.get(
+        "feature_names",
+        [c for c in feature_info.get("categorical", []) + feature_info.get("numerical", [])
+         if c in test_df.columns],
+    )
+    lr_pred_all = lr_model.predict_proba(
+        scaler.transform(test_df[lr_feature_cols].values.astype(np.float32))
+    )[:, 1]
+
+    # ESCM²-WC(DR) — all-bids WCTR
+    escm2 = np.load(escm2_path)
+    escm2_pred_all = escm2["p_click_bid"]
+
+    models = [
+        ("LGB CTR (won)", lgb_y, lgb_pred),
+        ("LR CTR_all", y_all, lr_pred_all),
+        ("ESCM²-WC(DR)", y_all, escm2_pred_all),
+    ]
+
+    save_path = FIG_DIR / "03_model_comparison_diagnostics.png"
+    plot_comparison_diagnostics(models, save_path=save_path)
+    plt.close()
+
+    for name, y_true, y_pred in models:
+        auc = roc_auc_score(y_true, y_pred)
+        ieb = abs(y_pred.mean() - y_true.mean()) / y_true.mean()
+        print(f"  {name} — AUC: {auc:.4f}, IEB: {ieb:.4f}")
+    print(f"Saved: {save_path}")
+
+
 if __name__ == "__main__":
     print("=== LGB CTR Diagnostics ===")
     generate_lgb_diagnostics()
@@ -110,4 +167,6 @@ if __name__ == "__main__":
     generate_lr_diagnostics()
     print("\n=== Neural Model Diagnostics ===")
     generate_neural_diagnostics()
+    print("\n=== Model Comparison Diagnostics ===")
+    generate_comparison_diagnostics()
     print("\nDone.")

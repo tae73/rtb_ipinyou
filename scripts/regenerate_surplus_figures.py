@@ -83,72 +83,63 @@ def generate_calibration_economic_value():
                  for n, _, _ in MODEL_SPECS]
         print(f"Ex{ex_id}: oracle={s_or:.2f} | " + " | ".join(parts))
 
-    # === 2-Panel Figure ===
-    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    # === Annotated Heatmap: Surplus Loss % ===
+    import matplotlib.colors as mcolors
 
-    # Left: Overall
-    ax = axes[0]
-    names_display = [r["name"].replace("ESCM²-WC(DR)", "ESCM²\nDR").replace("+ExtPS ", "+ExtPS\n")
-                     for r in overall_results]
-    colors = [r["color"] for r in overall_results]
-    surpluses = [r["true_surplus"] for r in overall_results]
+    col_labels = ["Overall", "Ex1\n(F300=69%)", "Ex2\n(F300=29%)", "Ex3\n(F300=12%)"]
 
-    x_pos = np.arange(len(overall_results))
-    ax.bar(x_pos, surpluses, color=colors, alpha=0.8, edgecolor="black", linewidth=0.5)
-    ax.axhline(s_oracle, color="gray", linestyle="--", linewidth=1,
-               label=f"Oracle: {s_oracle:.2f} CPM")
+    # Build loss matrix (rows=models, cols=contexts)
+    row_labels = []
+    loss_matrix = []
+    for name, ieb, _ in MODEL_SPECS:
+        short = (name.replace("ESCM²-WC(DR)", "ESCM²-DR")
+                 .replace("+ExtPS AW", "+ExtPS")
+                 .replace(" AL", "").replace(" J", "")
+                 .replace(" (biased)", ""))
+        row_labels.append(short)
+        r = next(r for r in overall_results if r["name"] == name)
+        row = [r["loss_pct"]]
+        for ex_id in sorted(ex_results.keys()):
+            row.append(ex_results[ex_id]["models"][name]["loss_pct"])
+        loss_matrix.append(row)
 
-    for i, r in enumerate(overall_results):
-        ax.text(i, r["true_surplus"] + 0.3,
-                f'b*={r["b_star"]:.0f}\nIEB={r["ieb"]:.3f}',
-                ha="center", va="bottom", fontsize=7)
+    data = np.array(loss_matrix)
 
-    ax.set_xticks(x_pos)
-    ax.set_xticklabels(names_display, fontsize=8)
-    ax.set_ylabel("Expected Surplus (CPM, true V basis)")
-    ax.set_title(f"Overall: Optimal Bid Surplus (V_true={V_TRUE:.0f} CPM)")
-    ax.legend(fontsize=9)
-    ax.set_ylim(0, max(surpluses) * 1.4)
+    with plt.style.context("seaborn-v0_8-whitegrid"):
+        fig, ax = plt.subplots(figsize=(10, 4))
 
-    # Right: Exchange-conditional
-    ax2 = axes[1]
-    ex_ids = sorted(ex_results.keys())
-    n_models = len(MODEL_SPECS)
-    width = 0.15
-    x_ex = np.arange(len(ex_ids))
+        cmap = mcolors.LinearSegmentedColormap.from_list(
+            "surplus", ["#2ECC71", "#F1C40F", "#E74C3C"], N=256
+        )
+        vmax = max(data.max(), 1.0)
+        im = ax.imshow(data, cmap=cmap, aspect="auto", vmin=0, vmax=vmax)
 
-    for j, (name, ieb, color) in enumerate(MODEL_SPECS):
-        vals = [ex_results[ex]["models"][name]["true_surplus"] for ex in ex_ids]
-        short_label = name.split(" ")[0] + " " + name.split(" ")[-1]
-        ax2.bar(x_ex + j * width, vals, width, color=color, alpha=0.8,
-                edgecolor="black", linewidth=0.5, label=short_label)
+        # Annotations
+        for i in range(data.shape[0]):
+            for j in range(data.shape[1]):
+                val = data[i, j]
+                color = "white" if val > vmax * 0.6 else "black"
+                ax.text(j, i, f"{val:.1f}%", ha="center", va="center",
+                        fontsize=12, fontweight="bold", color=color)
 
-    oracle_vals = [ex_results[ex]["oracle_surplus"] for ex in ex_ids]
-    ax2.scatter(x_ex + (n_models - 1) * width / 2, oracle_vals, marker="*", s=100,
-                color="gold", edgecolor="black", zorder=5, label="Oracle")
+        ax.set_xticks(np.arange(len(col_labels)))
+        ax.set_xticklabels(col_labels, fontsize=11)
+        ax.set_yticks(np.arange(len(row_labels)))
+        ax.set_yticklabels(row_labels, fontsize=11)
+        ax.xaxis.set_ticks_position("top")
+        ax.xaxis.set_label_position("top")
 
-    # Annotate max loss model per exchange
-    for i, ex in enumerate(ex_ids):
-        max_loss_name = max(ex_results[ex]["models"],
-                           key=lambda n: ex_results[ex]["models"][n]["loss_pct"])
-        loss = ex_results[ex]["models"][max_loss_name]["loss_pct"]
-        if loss > 0.5:
-            y_pos = ex_results[ex]["models"][max_loss_name]["true_surplus"]
-            ax2.text(i + (n_models - 1) * width, y_pos + 0.5, f"-{loss:.0f}%",
-                     ha="center", va="bottom", fontsize=8, color="red", fontweight="bold")
+        cbar = fig.colorbar(im, ax=ax, shrink=0.8, pad=0.02)
+        cbar.set_label("Surplus Loss vs Oracle (%)", fontsize=10)
 
-    ex_labels = {1: "Ex1\n(F300=69%)", 2: "Ex2\n(F300=29%)", 3: "Ex3\n(F300=12%)"}
-    ax2.set_xticks(x_ex + (n_models - 1) * width / 2)
-    ax2.set_xticklabels([ex_labels.get(ex, f"Ex{ex}") for ex in ex_ids], fontsize=9)
-    ax2.set_ylabel("Expected Surplus (CPM, true V basis)")
-    ax2.set_title("Exchange-Conditional: Miscalibration Impact")
-    ax2.legend(fontsize=7, loc="upper right")
+        ax.set_title("Calibration Impact on Bid Surplus",
+                     fontsize=13, fontweight="bold", pad=40)
 
-    plt.tight_layout()
-    save_path = FIG_DIR / "05_calibration_economic_value.png"
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
-    plt.close()
-    print(f"\nSaved: {save_path}")
+        plt.tight_layout()
+        save_path = FIG_DIR / "05_calibration_economic_value.png"
+        fig.savefig(save_path, dpi=150, bbox_inches="tight", facecolor="white")
+        plt.close()
+        print(f"\nSaved: {save_path}")
 
 
 def generate_overbidding_cumulative():
@@ -158,8 +149,8 @@ def generate_overbidding_cumulative():
     n_bids = 1_000_000
 
     ieb_values = [0.045, 0.073, 0.075, 0.122, 0.362]
-    ieb_labels = ["AW (0.045)", "AL (0.073)", "J (0.075)",
-                  "LR (0.122)", "LGB (0.362)"]
+    ieb_labels = ["ESCM²-DR\n+ExtPS", "ESCM²-DR", "ESMM-WC",
+                  "LR CTR_all", "LGB CTR"]
     colors = ["#1f77b4", "#2ca02c", "#d62728", "#9467bd", "#ff7f0e"]
 
     totals = [n_bids * actual_ctr * ieb * value_per_click for ieb in ieb_values]

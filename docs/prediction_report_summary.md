@@ -185,6 +185,19 @@ Propensity 또는 imputation 중 하나만 올바르면 일치성 보장 (doubly
 
 > 상세 수식 및 학습 설정: [prediction_report.md §2](prediction_report.md#2-방법론) 참조
 
+### Calibration의 경제적 평가: Overbidding vs Surplus
+
+RTB에서 calibration error(IEB)의 경제적 영향을 두 가지 관점에서 측정한다:
+
+| | Overbidding Cost | Surplus Loss |
+|---|---|---|
+| **측정** | 입찰가 초과분 (bid error) | 기대 수익 감소 (profit loss) |
+| **산식** | `IEB × actual_CTR × CPC` | `(V - b*) × F(b*)` vs Oracle |
+| **IEB 관계** | 선형 비례 | 시장 CDF shape 의존 |
+| **해석** | "calibration이 얼마나 나쁜가" (모델 품질) | "실제로 돈을 얼마나 잃는가" (비즈니스 임팩트) |
+
+Overbidding은 모든 exchange에서 동일하지만, surplus loss는 시장 경쟁도에 따라 다르다 — 경쟁이 낮은 exchange(Ex1)에서는 win rate가 높아 과다 입찰의 영향이 크고, 경쟁이 높은 exchange(Ex3)에서는 어차피 승리가 어려워 영향이 없다.
+
 ---
 
 ## Results Summary
@@ -219,8 +232,11 @@ Propensity 또는 imputation 중 하나만 올바르면 일치성 보장 (doubly
 - DR의 주요 기여는 AUC **+0.032 개선** (ESMM-WC → ESCM²-WC(DR))
 - External PS (Run AW) = **calibration best** (IEB 0.045)
 
-![Debiasing Ablation](../results/figures/04_debiasing_ablation_ladder.png)
-*Debiasing ablation ladder. Multi-task 모델이 biased baseline 대비 AUC + calibration 모두 개선.*
+![Model Comparison Diagnostics](../results/figures/03_model_comparison_diagnostics.png)
+*LGB CTR (won-only) vs LR CTR_all vs ESCM²-WC(DR) 비교. Calibration: ESCM²-WC(DR)이 perfect line에 가장 근접. LGB는 상위 bin에서 overestimation이 뚜렷하다.*
+
+![Overbidding Cost](../results/figures/04_overbidding_simulation.png)
+*모델별 Overbidding Cost (1M bids). Neural debiasing (AW 360K) vs LGB baseline (2,896K) — ~8배 차이.*
 
 ### Calibration의 경제적 가치
 
@@ -244,8 +260,8 @@ Propensity 또는 imputation 중 하나만 올바르면 일치성 보장 (doubly
 
 Neural debiasing = **near-oracle surplus**. LGB baseline은 경쟁이 낮은 Ex1에서 **-8% surplus 손실**.
 
-![Calibration Economic Value](../results/figures/05_calibration_economic_value.png)
-*Calibration → surplus 연결. Neural debiasing 모델은 near-oracle, LGB는 Ex1에서 -8% 손실.*
+![Surplus Loss by Exchange](../results/figures/05_calibration_economic_value.png)
+*Surplus Loss vs Oracle (%). LGB CTR은 Ex1(win rate 높은 exchange)에서 8.2% 손실. Neural debiasing 모델은 전 exchange에서 ~0% loss.*
 
 ### Production 모델 선택
 
