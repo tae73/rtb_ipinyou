@@ -26,7 +26,7 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 | Phase | Status | Progress |
 |-------|--------|----------|
 | Phase 1: MVP | ✅ Complete | 100% |
-| Phase 2: Debiasing | 🔄 In Progress | 75% |
+| Phase 2: Debiasing | 🔄 In Progress | 95% |
 | Phase 3: Causal & Serving | ⏳ Not Started | 0% |
 
 ---
@@ -153,17 +153,31 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 - Win Tower (SP1) + market price CDF (SP2) → bid shading shade(x) (SP3)
 - **Calibration 경제적 가치**: ESCM²-WC(DR) AL (IEB 0.014) → oracle-matching surplus, LR CTR_all (IEB 0.122) → 2.2% 손실 (8.7× overbid), LGB CTR (IEB 0.362) → 2.2% 손실 (25.9× overbid), ESMM-WC J (IEB 1.335) → 14.7% 손실 (95× overbid). AUC best (LR 0.7687) ≠ bidding best
 
-### Task 2.4: Bid Optimization (SP3) ⬆️ Elevated Priority
-- [ ] `src/bidding/value.py`
-- [ ] `src/bidding/shading.py`
-- [ ] `src/bidding/pacing.py`
-- [ ] `notebooks/07_bid_optimization.ipynb`
-- [ ] `notebooks/08_budget_pacing.ipynb`
+### Task 2.4: Bid Optimization (SP3) ✅ Complete
+- [x] `src/bidding/value.py`: ValueConfig, ValueResult, compute_impression_values (CPC/CPA/CPM)
+- [x] `src/bidding/shading.py`: Distribution-based optimal shading (argmax (V-b)×F(b)), linear, percentile, dual-regime (floor-aware), exchange-conditional
+- [x] `src/bidding/pacing.py`: PID controller, throttling, WR-weighted hourly budget allocation
+- [x] `src/bidding/simulator.py`: Offline auction simulation engine, 8-strategy comparison, won-only simulation framework
+- [x] `src/config.py`: BiddingConfig 확장 (goal_type, cpc_target=200K, shading_strategy, PID params, auction_type)
+- [x] `configs/bidding/default.yaml`: YAML config 업데이트
+- [x] `notebooks/07_bid_optimization.ipynb`: 12 sections, 11 figures, 7 CSV. Core result: iPinYou flat-bid surplus -805M → dual_regime surplus +128M
+- [x] `notebooks/08_budget_pacing.ipynb`: 8 sections, 7 figures. PID pacing + WR-weighted allocation + budget sensitivity
 
 **SP1 → SP3 연결 (Bid→Win→Click reframe 이후):**
 - V(x) = debiased_pCTR(x) × CPC_target (CVR near-trivial → CPC 기반 단순화)
 - Win Tower dual purpose: (a) CTR debiasing propensity, (b) market price CDF → bid shading
 - 전체 공식: bid(x) = V(x) × shade(x) × pace(t)
+
+**Core Simulation Results (Won-only, First-price, ESCM²-WC(DR)):**
+| Strategy | Win Rate | Clicks | Total Surplus | Overpayment | ROI |
+|----------|----------|--------|---------------|-------------|-----|
+| iPinYou flat | 100% | 4,482 | -805M | 10.14× | 0.74 |
+| Truthful (bid=V) | 51.8% | 2,266 | +17.7M | 5.79× | 1.56 |
+| Linear α=0.6 | 37.1% | 1,702 | +100M | 4.58× | 2.38 |
+| Optimal KM | 33.2% | 1,480 | +119M | 3.44× | 3.36 |
+| **Dual-regime** | **37.9%** | **1,608** | **+128M** | **2.77×** | **3.26** |
+
+**Key Insight**: Dual-regime (floor-aware) shading achieves highest surplus by bidding just above floor for floor-bound impressions (50.7%) and optimal shading for competitive impressions.
 
 ---
 
@@ -209,6 +223,10 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 | ESMM-WC | `src/models/esmm_wc.py` | Bid→Win→Click 2-tower (ESMM constraint) |
 | ESCM²-WC | `src/models/escm2_wc.py` | Bid→Win→Click 3-tower (DR/IPW debiasing) |
 | Win Propensity | `src/debiasing/win_propensity.py` | LightGBM + Calibration (external PS) |
+| **Bid Value** | `src/bidding/value.py` | V(x) = pCTR × CPC_target (CPC/CPA/CPM) |
+| **Bid Shading** | `src/bidding/shading.py` | Optimal, linear, percentile, dual-regime, exchange-conditional |
+| **Budget Pacing** | `src/bidding/pacing.py` | PID controller, throttling, WR-weighted allocation |
+| **Auction Simulator** | `src/bidding/simulator.py` | Offline auction simulation, 8-strategy comparison framework |
 
 ### CLI Scripts
 | Script | Path | Description |
@@ -226,6 +244,9 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 | 02_selection_bias_diagnosis | ✅ | Bias quantification |
 | 03_prediction_baseline | ✅ | LightGBM baseline + 3-panel diagnostics (LGB CTR, LR CTR_all) |
 | 04_prediction_debiasing | ✅ | DR 메커니즘 이론 + Component ablation (CFR, ExtPS) + Negative results + AUC-Calibration trade-off + Section 11 Neural diagnostics |
+| 05_win_rate_market_price | ✅ | NB05+NB06 통합 — 11 sections, 9 figures, KM CDF export, Calibration 경제적 가치 분석 |
+| 07_bid_optimization | ✅ | **SP3 Core** — 12 sections, 11 figures: Value analysis, bid shading theory, 8-strategy simulation, debiasing impact, sensitivity analysis |
+| 08_budget_pacing | ✅ | PID pacing + WR-weighted allocation + budget sensitivity + full pipeline comparison |
 
 ### Documentation
 | Doc | Path | Description |
@@ -235,6 +256,8 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 | RTB Ecosystem | `docs/rtb_ecosystem.md` | RTB 생태계 구조 & 경매 메커니즘 (SP3 도메인 배경) |
 | Research Design | `docs/research_design/` | SP0-SP5 research docs |
 | **Prediction Report** | `docs/prediction_report.md` | **포트폴리오 수준 연구 보고서 (778줄, 18 figures, 6 sections + 부록)** |
+| **Bid Optimization Report** | `docs/bid_optimization_report.md` | **SP3 방법론 + 결과 보고서 (619줄, 15 figures, 7 sections + 부록)** |
+| **Bid Optimization Summary** | `docs/bid_optimization_report_summary.md` | **SP3 요약 보고서 (412줄, 10 figures) — prediction_report_summary.md 대응** |
 
 ### iPinYou Data Schema
 - **Bid Log**: 21 columns (bidid, timestamp, ipinyouid, useragent, ip, region, city, adexchange, domain, url, urlid, slotid, slotwidth, slotheight, slotvisibility, slotformat, slotprice, creative, bidprice, advertiser, usertag)
@@ -284,6 +307,17 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 - **Attribution Window**: Raw conv/clk timestamp 기반 imp→click, click→conv, imp→conv 시간 분포 분석
 - **ESCM² CVR Tower 시사점**: View-through 존재 시 click-through만 사용, advertiser별 전환 정의 차이 확인
 - **Figure**: `results/figures/01_eda_conversion_attribution.png`
+
+### Bid Optimization Analysis (from notebooks 07-08, 2026-03-24)
+
+**Won-only First-Price Simulation (4.23M impressions):**
+- **iPinYou flat-bid baseline**: 100% WR, surplus -805M (massive overpayment 10.14×), ROI 0.74
+- **Optimal KM shading**: 33.2% WR, surplus +119M, overpayment 3.44×, ROI 3.36
+- **Dual-regime (best surplus)**: 37.9% WR, surplus +128M, overpayment 2.77× (lowest), ROI 3.26
+- **Exchange-conditional**: Exchange 1 (median 153) allows aggressive shading; Exchange 2/3 require conservative bids
+- **Debiasing impact**: ESCM²-WC(DR) IEB 0.014 → near-oracle V(x), IEB 0.5 → surplus halved
+- **Budget pacing**: PID controller with WR-weighted hourly allocation improves efficiency
+- **Key insight**: Floor-aware dual-regime shading outperforms pure optimal shading (50.7% floor-bound impressions bid just above floor)
 
 ### Two-Stage Selection Bias Analysis (from notebook 02, rewritten 2026-02-13)
 

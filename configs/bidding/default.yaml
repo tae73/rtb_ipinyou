@@ -1,6 +1,25 @@
-cpc_target: 50.0
-shading_factor: 0.8
+# Bidding strategy configuration (SP3)
+# All monetary values in CPM units.
+# CPC_target = 200,000 CPM/click (NB05 Section 11 기준)
+
+# Value computation
+goal_type: CPC
+cpc_target: 200000.0
+
+# Bid shading
+shading_strategy: optimal    # optimal, linear, percentile, dual_regime
+shading_factor: 0.8          # for linear strategy
 min_bid: 1.0
 max_bid: 300.0
+exchange_conditional: true
+
+# Budget pacing
 daily_budget: 10000.0
-pacing_type: pid
+pacing_type: pid             # pid, throttle, uniform, wr_weighted
+pid_kp: 0.5
+pid_ki: 0.1
+pid_kd: 0.1
+multiplier_range: [0.3, 2.0]
+
+# Simulation
+auction_type: first_price

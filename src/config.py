@@ -126,16 +126,29 @@ class ServingConfig(NamedTuple):
 
 
 class BiddingConfig(NamedTuple):
-    """Bidding strategy configuration."""
+    """Bidding strategy configuration.
+
+    All monetary values in CPM units.
+    CPC_target = 200,000 CPM/click (NB05 Section 11 기준).
+    """
     # Value computation (CPC-based, CVR near-trivial)
-    cpc_target: float = 50.0
+    goal_type: str = "CPC"                      # CPC, CPA, CPM
+    cpc_target: float = 200_000.0               # CPM per click
     # Bid shading
-    shading_factor: float = 0.8
+    shading_strategy: str = "optimal"           # optimal, linear, percentile, dual_regime
+    shading_factor: float = 0.8                 # for linear strategy
     min_bid: float = 1.0
     max_bid: float = 300.0
+    exchange_conditional: bool = True
     # Budget pacing
-    daily_budget: float = 10000.0
-    pacing_type: str = "pid"  # 'pid' or 'throttle'
+    daily_budget: float = 10_000.0
+    pacing_type: str = "pid"                    # pid, throttle, uniform, wr_weighted
+    pid_kp: float = 0.5
+    pid_ki: float = 0.1
+    pid_kd: float = 0.1
+    multiplier_range: Tuple[float, float] = (0.3, 2.0)
+    # Simulation
+    auction_type: str = "first_price"           # first_price, second_price
 
 
 # =============================================================================
