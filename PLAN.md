@@ -1,6 +1,6 @@
 # RTB iPinYou Project Progress Tracking
 
-**Last Updated**: 2026-03-19 (Next Steps #10 추가: Neural 모델 재학습 + Diagnostics Figure 생성 계획)
+**Last Updated**: 2026-04-01 (SP4 CATE/SCM 재설계: Surplus 중심 multi-outcome CATE + mediation + model-based counterfactual)
 
 ## Project Overview
 
@@ -27,7 +27,7 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 |-------|--------|----------|
 | Phase 1: MVP | ✅ Complete | 100% |
 | Phase 2: Debiasing | 🔄 In Progress | 95% |
-| Phase 3: Causal & Serving | ⏳ Not Started | 0% |
+| Phase 3: Causal & Serving | 🔄 In Progress | 20% |
 
 ---
 
@@ -183,17 +183,33 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 
 ## Phase 3: Causal & Serving (SP4 + SP5)
 
-### Task 3.1: CATE Analysis (SP4 Part A)
-- [ ] `src/causal/cate.py`
-- [ ] `notebooks/09a_cate_analysis.ipynb`
+### Task 3.1: Multi-Outcome CATE Analysis (SP4 Part A) 🔄 In Progress
+- [x] `src/causal/cate.py`: Multi-outcome CATE (win, payment, click, surplus) + mediation + segment
+- [x] `src/causal/__init__.py`: Public API exports
+- [x] `docs/research_design/04-causal-analysis.md`: 전면 재작성 (Surplus 중심, V(x) 불가 명시, 분해+mediation)
+- [ ] `notebooks/09a_cate_analysis.ipynb`: ~10 sections (CATE 분포, 분해 검증, mediation, segment heatmap)
 
-### Task 3.2: SCM & DAG (SP4 Part B)
-- [ ] `src/causal/scm.py`
-- [ ] `notebooks/09b_scm_dag.ipynb`
+**재설계 (2026-04):**
+- Treatment: T = log(bid_price), Outcome: Surplus (primary) + Win/Payment/Click 분해
+- V(x) CATE outcome 불가 (bid 무관, ∂V/∂bid = 0, 순환 논리)
+- Surplus point mass at 0 해결: Multi-outcome 분해 (τ_surplus ≈ V·τ_win - τ_pay)
+- Mediation: NIE (volume: V(x)×τ_win) vs NDE (cost: Total - NIE)
+- Advertiser-stratified CATE (Simpson's Paradox 방지)
 
-### Task 3.3: Policy Simulation (SP4 Part C)
-- [ ] `src/causal/policy_simulator.py`
-- [ ] `src/causal/budget_analyzer.py`
+### Task 3.2: SCM & DAG (SP4 Part B) 🔄 In Progress
+- [x] `src/causal/scm.py`: DAG + DoWhy estimation + refutation + model-based counterfactual
+- [ ] `notebooks/09b_scm_dag.ipynb`: ~7 sections (DAG 시각화, estimation, refutation, counterfactual scenarios)
+
+**재설계 (2026-04):**
+- DAG에 surplus, payment 노드 추가 (2-channel: volume + cost)
+- Model-based counterfactual: `run_auction_simulation()` 재활용 (structural equation 대신)
+- Refutation: random_common_cause, placebo_treatment, data_subset
+
+### Task 3.3: Policy Simulation (SP4 Part C) — SP3에서 대부분 구현 완료
+- [x] `src/bidding/simulator.py`: 8-strategy offline auction simulation (SP3 완료)
+- [x] `src/bidding/shading.py`: Optimal/dual-regime/exchange-conditional shading (SP3 완료)
+- [x] `src/bidding/pacing.py`: PID controller + WR-weighted allocation (SP3 완료)
+- [ ] CATE-informed bidding strategy 연동 (τ_surplus 기반 bid_adj)
 - [ ] `notebooks/10_policy_simulation.ipynb`
 
 ### Task 3.4: Serving (SP5)
@@ -223,6 +239,8 @@ iPinYou RTB 데이터를 활용한 **Selection Bias Debiasing + First-price Bid 
 | ESMM-WC | `src/models/esmm_wc.py` | Bid→Win→Click 2-tower (ESMM constraint) |
 | ESCM²-WC | `src/models/escm2_wc.py` | Bid→Win→Click 3-tower (DR/IPW debiasing) |
 | Win Propensity | `src/debiasing/win_propensity.py` | LightGBM + Calibration (external PS) |
+| **CATE** | `src/causal/cate.py` | Multi-outcome CATE (CausalForestDML) + mediation + segment |
+| **SCM** | `src/causal/scm.py` | DAG + DoWhy estimation + refutation + model-based counterfactual |
 | **Bid Value** | `src/bidding/value.py` | V(x) = pCTR × CPC_target (CPC/CPA/CPM) |
 | **Bid Shading** | `src/bidding/shading.py` | Optimal, linear, percentile, dual-regime, exchange-conditional |
 | **Budget Pacing** | `src/bidding/pacing.py` | PID controller, throttling, WR-weighted allocation |
