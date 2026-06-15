@@ -1,0 +1,24 @@
+# rsync exclude list for scripts/sync.sh (push direction)
+# Keeps PLAN.md / CLAUDE.md / results/figures (sent to server);
+# excludes large data, model artifacts, caches, secrets, IDE/venv noise.
+
+.git/
+.idea/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.DS_Store
+Thumbs.db
+*.pem
+.claude/
+tmp/
+wandb/
+data/
+results/models/
+results/models_synthetic/
+results/cache/
+*.parquet
+*.npz
+*.bz2

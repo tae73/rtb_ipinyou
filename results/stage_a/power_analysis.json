@@ -1,0 +1,263 @@
+{
+  "_meta": {
+    "strategy": "truthful (2p-optimal, second-price)",
+    "cpc": 200000.0,
+    "n_winners": 5616873,
+    "n_clicks": 4512,
+    "note": "5 advertisers = entire fair shared-vocab split (population). 9-advertiser eval is a dead end (disjoint-advertiser artifact)."
+  },
+  "neural_minus_lgb": {
+    "comparison": "neural - lgb",
+    "R1_per_advertiser": {
+      "1458": {
+        "gap": -858674.0,
+        "ci95": [
+          -4252250.7,
+          2564036.3
+        ],
+        "se": 1738848.7,
+        "p_gt_0": 0.2952,
+        "ci_excludes_0": false,
+        "n_clicks": 1172
+      },
+      "3358": {
+        "gap": -3679733.0,
+        "ci95": [
+          -7460973.9,
+          152262.3
+        ],
+        "se": 1942152.1,
+        "p_gt_0": 0.0302,
+        "ci_excludes_0": false,
+        "n_clicks": 412
+      },
+      "3386": {
+        "gap": 220247.0,
+        "ci95": [
+          -4992726.8,
+          5437442.6
+        ],
+        "se": 2660757.5,
+        "p_gt_0": 0.5438,
+        "ci_excludes_0": false,
+        "n_clicks": 1012
+      },
+      "3427": {
+        "gap": 13932197.0,
+        "ci95": [
+          7630597.4,
+          20440034.0
+        ],
+        "se": 3267713.4,
+        "p_gt_0": 1.0,
+        "ci_excludes_0": true,
+        "n_clicks": 1410
+      },
+      "3476": {
+        "gap": -236360.0,
+        "ci95": [
+          -3078603.4,
+          2568618.4
+        ],
+        "se": 1440617.8,
+        "p_gt_0": 0.4314,
+        "ci_excludes_0": false,
+        "n_clicks": 506
+      }
+    },
+    "n_advertisers_positive": 2,
+    "n_advertisers_ci_win": 1,
+    "n_advertisers": 5,
+    "R2_sign_test": {
+      "k_pos": 2,
+      "n": 5,
+      "p_greater": 0.8125
+    },
+    "R3_heterogeneity": {
+      "Q": 22.04,
+      "df": 4,
+      "p": 0.0002,
+      "I2": 0.819,
+      "tau2": 18470381873130.6,
+      "fixed_effect_mean": -28612.4,
+      "heterogeneous": true
+    },
+    "R4_mde": {
+      "mean_gap": 1875535.4,
+      "sd_between": 6908329.7,
+      "mde_80": 11484933.4,
+      "observed_above_mde": false,
+      "n_clusters_for_power": 106.5
+    },
+    "R5_icc_per_adv_hour_gap": 0.0903,
+    "R5_finer_clustering": "forbidden (ICC>0)",
+    "R6_loao_means": [
+      2559087.8,
+      3264352.5,
+      2289357.5,
+      -1138630.0,
+      2403509.2
+    ],
+    "cluster_mean_ci_sanity": {
+      "point": 9377677.0,
+      "ci95": [
+        -11055312.0,
+        40701557.0
+      ],
+      "p_gt_0": 0.6725,
+      "excludes_0": false
+    },
+    "mechanism_residual_ieb": {
+      "1458": {
+        "a_ieb": 0.0073,
+        "b_ieb": 0.0665
+      },
+      "3358": {
+        "a_ieb": 0.2085,
+        "b_ieb": 0.0861
+      },
+      "3386": {
+        "a_ieb": 0.1553,
+        "b_ieb": 0.0031
+      },
+      "3427": {
+        "a_ieb": 0.0851,
+        "b_ieb": 0.1253
+      },
+      "3476": {
+        "a_ieb": 0.2262,
+        "b_ieb": 0.2715
+      }
+    }
+  },
+  "neural_minus_lr": {
+    "comparison": "neural - lr",
+    "R1_per_advertiser": {
+      "1458": {
+        "gap": 8217320.0,
+        "ci95": [
+          4258929.2,
+          12344511.6
+        ],
+        "se": 2062648.6,
+        "p_gt_0": 1.0,
+        "ci_excludes_0": true,
+        "n_clicks": 1172
+      },
+      "3358": {
+        "gap": 3295818.0,
+        "ci95": [
+          -256386.7,
+          6880454.8
+        ],
+        "se": 1820622.8,
+        "p_gt_0": 0.9648,
+        "ci_excludes_0": false,
+        "n_clicks": 412
+      },
+      "3386": {
+        "gap": 7859894.0,
+        "ci95": [
+          2849813.2,
+          12844578.9
+        ],
+        "se": 2549685.1,
+        "p_gt_0": 0.999,
+        "ci_excludes_0": true,
+        "n_clicks": 1012
+      },
+      "3427": {
+        "gap": 5597369.0,
+        "ci95": [
+          -133901.6,
+          11339121.4
+        ],
+        "se": 2926791.6,
+        "p_gt_0": 0.9712,
+        "ci_excludes_0": false,
+        "n_clicks": 1410
+      },
+      "3476": {
+        "gap": 2465382.0,
+        "ci95": [
+          -196471.9,
+          5226891.4
+        ],
+        "se": 1383511.1,
+        "p_gt_0": 0.9658,
+        "ci_excludes_0": false,
+        "n_clicks": 506
+      }
+    },
+    "n_advertisers_positive": 5,
+    "n_advertisers_ci_win": 2,
+    "n_advertisers": 5,
+    "R2_sign_test": {
+      "k_pos": 5,
+      "n": 5,
+      "p_greater": 0.03125
+    },
+    "R3_heterogeneity": {
+      "Q": 7.72,
+      "df": 4,
+      "p": 0.1024,
+      "I2": 0.482,
+      "tau2": 3769930033431.9,
+      "fixed_effect_mean": 4569506.6,
+      "heterogeneous": false
+    },
+    "R4_mde": {
+      "mean_gap": 5487156.6,
+      "sd_between": 2599466.7,
+      "mde_80": 4321551.4,
+      "observed_above_mde": true,
+      "n_clusters_for_power": 1.8
+    },
+    "R5_icc_per_adv_hour_gap": -0.0339,
+    "R5_finer_clustering": "ICC~0 (would be permissible)",
+    "R6_loao_means": [
+      4804615.8,
+      6034991.2,
+      4893972.2,
+      5459603.5,
+      6242600.2
+    ],
+    "cluster_mean_ci_sanity": {
+      "point": 27435783.0,
+      "ci95": [
+        17721422.0,
+        37751797.0
+      ],
+      "p_gt_0": 1.0,
+      "excludes_0": true
+    },
+    "mechanism_residual_ieb": {
+      "1458": {
+        "a_ieb": 0.0073,
+        "b_ieb": 0.0999
+      },
+      "3358": {
+        "a_ieb": 0.2085,
+        "b_ieb": 0.1528
+      },
+      "3386": {
+        "a_ieb": 0.1553,
+        "b_ieb": 0.0217
+      },
+      "3427": {
+        "a_ieb": 0.0851,
+        "b_ieb": 0.0414
+      },
+      "3476": {
+        "a_ieb": 0.2262,
+        "b_ieb": 0.2836
+      }
+    }
+  },
+  "verdict": {
+    "neural_vs_lgb_robust": false,
+    "neural_vs_lgb": "NOT robust \u2014 advertiser-heterogeneous: positive on 2/5 (CI-significant on only 1/5), heterogeneity CONFIRMED (I\u00b2=0.819, Q p=0.0002); cluster-mean CI [-11055312.0, 40701557.0] contains 0; MDE 1.15e+07 vs observed mean 1.88e+06; leave-one-out shows single-advertiser leverage.",
+    "neural_vs_lr": "robust (cluster CI [17721422.0, 37751797.0], positive on 5/5)",
+    "finer_clustering": "forbidden (ICC>0)"
+  }
+}

@@ -65,6 +65,10 @@ class ESCM2WCConfig(NamedTuple):
     ctr_weight: float = 1.0
     joint_weight: float = 1.0
     impute_loss_weight: float = 0.5
+    # Positive-class up-weighting for the CTR BCE term (applies to the IPW BCE
+    # and the DR 'bce' pseudo-label BCE; the DR 'mse' path uses squared error
+    # and is unaffected). None (default) = standard unweighted BCE.
+    ctr_pos_weight: Optional[float] = None
     # Imputation loss config
     impute_loss_type: str = "mse"  # 'mse' or 'huber'
     impute_huber_delta: float = 0.1  # Huber loss delta (only used when impute_loss_type='huber')
@@ -291,7 +295,9 @@ def create_escm2wc_loss_fn(
         impute_loss = 0.0
 
         if config.loss_type == "ipw":
-            ctr_bce = binary_cross_entropy(output.p_ctr, batch["click"])
+            ctr_bce = binary_cross_entropy(
+                output.p_ctr, batch["click"], pos_weight=config.ctr_pos_weight
+            )
             ctr_loss_base = jnp.mean(weights * ctr_bce)
             ctr_loss = ctr_loss_base
 
@@ -311,7 +317,9 @@ def create_escm2wc_loss_fn(
                     jnp.clip(dr_estimate, 1e-7, 1.0 - 1e-7)
                 )
                 ctr_loss_base = jnp.mean(
-                    binary_cross_entropy(output.p_ctr, dr_target)
+                    binary_cross_entropy(
+                        output.p_ctr, dr_target, pos_weight=config.ctr_pos_weight
+                    )
                 )
 
             # Imputation tower supervision (won samples only)

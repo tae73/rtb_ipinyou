@@ -42,6 +42,9 @@ class ESMMWCConfig(NamedTuple):
     win_weight: float = 1.0
     ctr_weight: float = 1.0
     joint_weight: float = 1.0
+    # Positive-class up-weighting for the DIRECT winners-CTR BCE term.
+    # None (default) = standard unweighted BCE (unchanged behavior).
+    ctr_pos_weight: Optional[float] = None
     # Architecture options
     use_fm_interaction: bool = True
     use_layer_norm: bool = False
@@ -215,7 +218,11 @@ def create_esmm_wc_loss_fn(
         )
 
         # CTR loss (won samples only — masked)
-        ctr_bce = binary_cross_entropy(output.p_ctr, batch["click"])
+        # Optional pos_weight up-weights the rare positive (click) term so the
+        # DIRECT winners-CTR tower is not shrunk toward 0 at the ~0.1% base rate.
+        ctr_bce = binary_cross_entropy(
+            output.p_ctr, batch["click"], pos_weight=config.ctr_pos_weight
+        )
         n_won = jnp.clip(batch["win"].sum(), 1.0, None)
         ctr_loss = jnp.sum(batch["win"] * ctr_bce) / n_won
 

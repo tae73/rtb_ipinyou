@@ -1,0 +1,218 @@
+{
+  "models": {
+    "escm2wc_dr_fair (neural, fixed)": {
+      "winners_auc": 0.6580994602702316,
+      "all_bids_auc": 0.6149513657582811,
+      "winners_quantile_ece": 0.0004793477976555227,
+      "winners_ieb": 1.479761469432022,
+      "winners_deciles": [
+        {
+          "bin": 0,
+          "pred": 3.6e-05,
+          "true": 0.000235,
+          "ratio": 0.153
+        },
+        {
+          "bin": 1,
+          "pred": 7.25e-05,
+          "true": 0.0003383,
+          "ratio": 0.214
+        },
+        {
+          "bin": 2,
+          "pred": 0.0001065,
+          "true": 0.0004273,
+          "ratio": 0.249
+        },
+        {
+          "bin": 3,
+          "pred": 0.0001438,
+          "true": 0.0005982,
+          "ratio": 0.24
+        },
+        {
+          "bin": 4,
+          "pred": 0.0001878,
+          "true": 0.0006053,
+          "ratio": 0.31
+        },
+        {
+          "bin": 5,
+          "pred": 0.0002451,
+          "true": 0.000883,
+          "ratio": 0.278
+        },
+        {
+          "bin": 6,
+          "pred": 0.0003189,
+          "true": 0.0009008,
+          "ratio": 0.354
+        },
+        {
+          "bin": 7,
+          "pred": 0.0004139,
+          "true": 0.0010148,
+          "ratio": 0.408
+        },
+        {
+          "bin": 8,
+          "pred": 0.0005597,
+          "true": 0.0011002,
+          "ratio": 0.509
+        },
+        {
+          "bin": 9,
+          "pred": 0.0011552,
+          "true": 0.0019299,
+          "ratio": 0.599
+        }
+      ]
+    },
+    "lr_ctr_all (fair)": {
+      "winners_auc": 0.5540208483279839,
+      "all_bids_auc": 0.6849415050779962,
+      "winners_quantile_ece": 0.0005472622255031024,
+      "winners_ieb": 0.30336286627646325,
+      "winners_deciles": [
+        {
+          "bin": 0,
+          "pred": 0.000286,
+          "true": 0.0006089,
+          "ratio": 0.47
+        },
+        {
+          "bin": 1,
+          "pred": 0.0004187,
+          "true": 0.0006943,
+          "ratio": 0.603
+        },
+        {
+          "bin": 2,
+          "pred": 0.0005077,
+          "true": 0.0006872,
+          "ratio": 0.739
+        },
+        {
+          "bin": 3,
+          "pred": 0.0005954,
+          "true": 0.0007264,
+          "ratio": 0.82
+        },
+        {
+          "bin": 4,
+          "pred": 0.0006989,
+          "true": 0.0007086,
+          "ratio": 0.986
+        },
+        {
+          "bin": 5,
+          "pred": 0.0008252,
+          "true": 0.0008937,
+          "ratio": 0.923
+        },
+        {
+          "bin": 6,
+          "pred": 0.0010075,
+          "true": 0.0008012,
+          "ratio": 1.258
+        },
+        {
+          "bin": 7,
+          "pred": 0.001296,
+          "true": 0.0008403,
+          "ratio": 1.542
+        },
+        {
+          "bin": 8,
+          "pred": 0.0019248,
+          "true": 0.0007762,
+          "ratio": 2.48
+        },
+        {
+          "bin": 9,
+          "pred": 0.0039708,
+          "true": 0.0012961,
+          "ratio": 3.064
+        }
+      ]
+    },
+    "lgb_ctr_all (fair)": {
+      "winners_auc": 0.6321273280110161,
+      "all_bids_auc": 0.719719370735905,
+      "winners_quantile_ece": 0.0005431602208885711,
+      "winners_ieb": 0.9067130727518593,
+      "winners_deciles": [
+        {
+          "bin": 0,
+          "pred": 5.04e-05,
+          "true": 0.0004483,
+          "ratio": 0.112
+        },
+        {
+          "bin": 1,
+          "pred": 6.74e-05,
+          "true": 0.0003737,
+          "ratio": 0.18
+        },
+        {
+          "bin": 2,
+          "pred": 8.48e-05,
+          "true": 0.0004078,
+          "ratio": 0.208
+        },
+        {
+          "bin": 3,
+          "pred": 0.0001126,
+          "true": 0.0007256,
+          "ratio": 0.155
+        },
+        {
+          "bin": 4,
+          "pred": 0.0001426,
+          "true": 0.0006895,
+          "ratio": 0.207
+        },
+        {
+          "bin": 5,
+          "pred": 0.0001784,
+          "true": 0.0007158,
+          "ratio": 0.249
+        },
+        {
+          "bin": 6,
+          "pred": 0.0002108,
+          "true": 0.0008168,
+          "ratio": 0.258
+        },
+        {
+          "bin": 7,
+          "pred": 0.000255,
+          "true": 0.0008759,
+          "ratio": 0.291
+        },
+        {
+          "bin": 8,
+          "pred": 0.0003369,
+          "true": 0.0010177,
+          "ratio": 0.331
+        },
+        {
+          "bin": 9,
+          "pred": 0.0027766,
+          "true": 0.0019703,
+          "ratio": 1.409
+        }
+      ]
+    }
+  },
+  "verdict": {
+    "neural_winners_auc": 0.6580994602702316,
+    "lr_winners_auc": 0.5540208483279839,
+    "lgb_winners_auc": 0.6321273280110161,
+    "neural_vs_lgb_gap": 0.026,
+    "ranking_converged (|neural-lgb|<0.03)": true,
+    "neural_winners_ieb": 1.479761469432022,
+    "calibration_under_deciles (ratio<0.8, was 10/10)": 10,
+    "calibration_fixed (<=3 deciles under)": false
+  }
+}

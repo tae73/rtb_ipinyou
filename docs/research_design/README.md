@@ -1,5 +1,9 @@
 # iPinYou RTB 프로젝트 Research Design
 
+> **현행 결과·평가 프로토콜:** 본 SP0–SP5 설계 문서 이후의 최신 결과(2026-06 재설계: calibration→surplus)는
+> [`../redesign_findings.md`](../redesign_findings.md), 정본 평가 프로토콜은
+> [`../evaluation_protocol.md`](../evaluation_protocol.md) 참조.
+
 ---
 
 ## 프로젝트 개요

@@ -1,5 +1,10 @@
 # First-Price Bid Optimization: iPinYou RTB 사례 연구
 
+> ⚠️ **Framework current; inputs stale.** The bid-optimization method and surplus formulas here remain
+> valid, but the **SP1 pCTR inputs and IEB numbers are pre-recalibration, original/unfair-split** values.
+> For current calibration→surplus results (Stage B2) see [`redesign_findings.md`](../redesign_findings.md);
+> the frozen metric definitions are in [`evaluation_protocol.md`](../evaluation_protocol.md).
+
 ## 요약
 
 본 보고서는 Real-Time Bidding (RTB) 환경에서 First-price 입찰 최적화의 방법론과 실험 결과를 기술한다. iPinYou RTB 데이터셋의 4,228,166건 won impression에 대해 7개 bidding 전략을 오프라인 시뮬레이션으로 비교하였다.

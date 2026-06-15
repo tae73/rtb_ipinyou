@@ -1,0 +1,239 @@
+{
+  "_meta": {
+    "cpc": 200000.0,
+    "n": 19424020,
+    "winrate": 0.2891752067800589,
+    "n_clicks": 4534
+  },
+  "P2_recover_observable": {
+    "logged_policy_value": 455419091.0,
+    "realized_2p_surplus_clean": 455419091.0,
+    "realized_2p_surplus_all": 463803989.0,
+    "match_clean": true,
+    "n_payprice_gt_bidprice_anomalies": 69568,
+    "frac_anomalies": 0.0124,
+    "anomaly_surplus_excluded": 8384898.0,
+    "note": "logged policy bids==logged bids \u2192 all EXACT; equals realized 2nd-price surplus on the valid (payprice<=bidprice) won rows. The payprice>bidprice rows VIOLATE second-price (iPinYou data quirk) and are correctly excluded \u2014 a data-quality finding."
+  },
+  "P0_support_audit": {
+    "neural": {
+      "frac_value_modeled": 0.0048,
+      "frac_rows_extrapolated": 0.03695,
+      "frac_bid_at_ceiling": 0.0293
+    },
+    "lr": {
+      "frac_value_modeled": 0.0074,
+      "frac_rows_extrapolated": 0.01601,
+      "frac_bid_at_ceiling": 0.0194
+    },
+    "lgb": {
+      "frac_value_modeled": 0.0035,
+      "frac_rows_extrapolated": 0.03087,
+      "frac_bid_at_ceiling": 0.0181
+    }
+  },
+  "P1_market_calibration": {
+    "cells": [
+      {
+        "seg": "-1_1",
+        "bid": 277.0,
+        "n": 305378,
+        "realized_wr": 0.0,
+        "F_pred": 0.0,
+        "in_ci": true
+      },
+      {
+        "seg": "1_0",
+        "bid": 227.0,
+        "n": 1177756,
+        "realized_wr": 0.5972,
+        "F_pred": 0.5093,
+        "in_ci": false
+      },
+      {
+        "seg": "1_0",
+        "bid": 238.0,
+        "n": 377674,
+        "realized_wr": 0.6344,
+        "F_pred": 0.5224,
+        "in_ci": false
+      },
+      {
+        "seg": "1_0",
+        "bid": 294.0,
+        "n": 631547,
+        "realized_wr": 0.0,
+        "F_pred": 0.5516,
+        "in_ci": false
+      },
+      {
+        "seg": "1_0",
+        "bid": 300.0,
+        "n": 1005906,
+        "realized_wr": 0.7668,
+        "F_pred": 0.5561,
+        "in_ci": false
+      },
+      {
+        "seg": "2_1",
+        "bid": 238.0,
+        "n": 1317290,
+        "realized_wr": 0.575,
+        "F_pred": 0.4645,
+        "in_ci": false
+      },
+      {
+        "seg": "2_1",
+        "bid": 249.0,
+        "n": 413616,
+        "realized_wr": 0.6716,
+        "F_pred": 0.4687,
+        "in_ci": false
+      },
+      {
+        "seg": "2_1",
+        "bid": 277.0,
+        "n": 791750,
+        "realized_wr": 0.0,
+        "F_pred": 0.4792,
+        "in_ci": false
+      },
+      {
+        "seg": "2_1",
+        "bid": 300.0,
+        "n": 1342356,
+        "realized_wr": 0.6039,
+        "F_pred": 0.4905,
+        "in_ci": false
+      },
+      {
+        "seg": "3_0",
+        "bid": 294.0,
+        "n": 18000,
+        "realized_wr": 0.0,
+        "F_pred": 0.0,
+        "in_ci": true
+      },
+      {
+        "seg": "3_1",
+        "bid": 241.0,
+        "n": 2840043,
+        "realized_wr": 0.2887,
+        "F_pred": 0.1743,
+        "in_ci": false
+      },
+      {
+        "seg": "3_1",
+        "bid": 254.0,
+        "n": 1222390,
+        "realized_wr": 0.2673,
+        "F_pred": 0.1745,
+        "in_ci": false
+      },
+      {
+        "seg": "3_1",
+        "bid": 294.0,
+        "n": 1435505,
+        "realized_wr": 0.0,
+        "F_pred": 0.1745,
+        "in_ci": false
+      },
+      {
+        "seg": "3_1",
+        "bid": 300.0,
+        "n": 6289765,
+        "realized_wr": 0.1447,
+        "F_pred": 0.1745,
+        "in_ci": false
+      },
+      {
+        "seg": "4_0",
+        "bid": 294.0,
+        "n": 254114,
+        "realized_wr": 0.0,
+        "F_pred": 0.0,
+        "in_ci": false
+      }
+    ],
+    "frac_in_wilson_ci": 0.133,
+    "note": "F(b|x) vs realized win-rate at logged bid levels (\u2264300 only)."
+  },
+  "P3_full_inventory_gap": {
+    "neural_minus_lr": {
+      "point": 22029892.2,
+      "paired_ci95": [
+        12378183.5,
+        31754360.1
+      ],
+      "paired_p_gt_0": 1.0,
+      "cluster_ci95": [
+        5474837.2,
+        39818970.1
+      ],
+      "cluster_p_gt_0": 0.9997
+    },
+    "neural_minus_lgb": {
+      "point": 9686582.0,
+      "paired_ci95": [
+        -689951.4,
+        19708424.6
+      ],
+      "paired_p_gt_0": 0.966,
+      "cluster_ci95": [
+        -16364172.9,
+        46797983.0
+      ],
+      "cluster_p_gt_0": 0.659
+    }
+  },
+  "models_truthful": {
+    "neural": {
+      "total": 438993941.2,
+      "v_exact": 436907554.0,
+      "v_model": 2086387.2,
+      "frac_value_modeled": 0.0048,
+      "frac_rows_extrapolated": 0.03695,
+      "n_winnable_exact": 4704772,
+      "frac_bid_at_ceiling": 0.029309895685856995,
+      "mean_bid": 156.25
+    },
+    "lr": {
+      "total": 416964049.0,
+      "v_exact": 413885335.0,
+      "v_model": 3078714.0,
+      "frac_value_modeled": 0.0074,
+      "frac_rows_extrapolated": 0.01601,
+      "n_winnable_exact": 4979571,
+      "frac_bid_at_ceiling": 0.019433670270108866,
+      "mean_bid": 142.04
+    },
+    "lgb": {
+      "total": 429307359.3,
+      "v_exact": 427791383.0,
+      "v_model": 1515976.3,
+      "frac_value_modeled": 0.0035,
+      "frac_rows_extrapolated": 0.03087,
+      "n_winnable_exact": 4899931,
+      "frac_bid_at_ceiling": 0.01808111812075976,
+      "mean_bid": 132.39
+    }
+  },
+  "verdict": {
+    "p2_recovers_observable": true,
+    "max_frac_value_modeled": 0.0074,
+    "headline_neural_minus_lgb": {
+      "point": 9686582.0,
+      "paired_ci95": [
+        -689951.4,
+        19708424.6
+      ],
+      "paired_p_gt_0": 0.966,
+      "cluster_ci95": [
+        -16364172.9,
+        46797983.0
+      ],
+      "cluster_p_gt_0": 0.659
+    },
+    "claim": "Full-inventory second-price truthful-bidding value: neural\u2212lgb = 9.687e+06 (cluster CI [-16364172.9, 46797983.0], p=0.659). MOSTLY OBSERVABLE: \u22640.7% of value is extrapolated (the rest is EXACT second-price surplus). P2 sanity holds (estimator reproduces realized surplus on the logged policy)."
+  }
+}

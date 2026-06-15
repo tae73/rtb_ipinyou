@@ -1,5 +1,10 @@
 # Neural Model Performance Tuning Log
 
+> ⚠️ **HISTORICAL — not maintained.** A 20-phase AUC-tuning log on the **original/unfair split**
+> (ended 2026-03-16). The 2026-06 redesign showed the AUC "gap" it chased was largely a split
+> artifact; kept for methodology reference only. **Current → [`redesign_findings.md`](../redesign_findings.md);
+> protocol → [`evaluation_protocol.md`](../evaluation_protocol.md).**
+
 **Last Updated**: 2026-03-16 (Phase 20 Target Encoding — 가설 기각, TE가 neural model에서 역효과)
 
 ## 1. Problem Statement

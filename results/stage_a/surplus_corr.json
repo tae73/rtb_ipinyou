@@ -1,0 +1,251 @@
+{
+  "n_won_only": 4228166,
+  "n_clicks_won_only": 4482,
+  "true_ctr_won_only": 0.0010600340667797812,
+  "cpc_target": 200000.0,
+  "shading": "exchange_conditional optimal first-price (CDFs ex1/2/3, overall fallback)",
+  "value_def": "V(x) = winners_pCTR * CPC_target",
+  "variant_note": "escm2wc_dr_scale{0.5,1,2}: pCTR*k, monotone -> AUC fixed, sweeps IEB",
+  "per_model": {
+    "esmmwc": {
+      "is_variant": false,
+      "surplus": 118952486.95553899,
+      "realized_surplus": 186140649.45945945,
+      "surplus_per_win": 83.50156396706548,
+      "roi": 3.026365833898526,
+      "overpay": 3.4822174574226734,
+      "n_wins": 1424554,
+      "win_rate": 0.33692007362057214,
+      "total_clicks": 1390,
+      "total_spend": 91859350.54054055,
+      "mean_value": 97.51811514972655,
+      "mean_bid": 43.50930782235561,
+      "all_bids_auc": 0.6527249428832123,
+      "winners_only_auc": 0.5234146961856146,
+      "ece_quantile": 0.0006825294869498324,
+      "ece_uniform": 0.0005724434910311484,
+      "ieb": 0.540023673739225
+    },
+    "escm2wc_dr": {
+      "is_variant": false,
+      "surplus": 120831984.55481872,
+      "realized_surplus": 205486066.54454452,
+      "surplus_per_win": 84.7529799864899,
+      "roi": 3.240510888613747,
+      "overpay": 3.38250642846473,
+      "n_wins": 1425696,
+      "win_rate": 0.337190167084263,
+      "total_clicks": 1486,
+      "total_spend": 91713933.45545545,
+      "mean_value": 96.87026871950535,
+      "mean_bid": 43.49501195760259,
+      "all_bids_auc": 0.6850843826447658,
+      "winners_only_auc": 0.5581831677337707,
+      "ece_quantile": 0.0005756827231822544,
+      "ece_uniform": 0.0005756827231822544,
+      "ieb": 0.5430794549189245
+    },
+    "escm2wc_dr_extps": {
+      "is_variant": false,
+      "surplus": 130744355.58818775,
+      "realized_surplus": 203545286.24824825,
+      "surplus_per_win": 88.29722879133114,
+      "roi": 3.0590347037916676,
+      "overpay": 3.5575774769198465,
+      "n_wins": 1480730,
+      "win_rate": 0.3502062123388722,
+      "total_clicks": 1512,
+      "total_spend": 98854713.75175175,
+      "mean_value": 102.03766763870806,
+      "mean_bid": 45.56394062829856,
+      "all_bids_auc": 0.6837458308667554,
+      "winners_only_auc": 0.5602401811830826,
+      "ece_quantile": 0.0005498457285862409,
+      "ece_uniform": 0.000549845728586241,
+      "ieb": 0.5187057150498823
+    },
+    "lr_ctr_all": {
+      "is_variant": false,
+      "surplus": 32301629.91796098,
+      "realized_surplus": 225334159.34534535,
+      "surplus_per_win": 33.39981586355466,
+      "roi": 7.213399586986387,
+      "overpay": 2.2549290821798578,
+      "n_wins": 967120,
+      "win_rate": 0.22873274133513208,
+      "total_clicks": 1308,
+      "total_spend": 36265840.65465465,
+      "mean_value": 49.32842480560647,
+      "mean_bid": 25.77651376911813,
+      "all_bids_auc": 0.7686518536166271,
+      "winners_only_auc": 0.7143831675490268,
+      "ece_quantile": 0.0008133919427517487,
+      "ece_uniform": 0.0008133919427517489,
+      "ieb": 0.7673262286963165
+    },
+    "lgb_ctr_all": {
+      "is_variant": false,
+      "surplus": 119643446.52289711,
+      "realized_surplus": 118102275.6976977,
+      "surplus_per_win": 141.73983661163066,
+      "roi": 6.597867997773092,
+      "overpay": 1.7211384317881429,
+      "n_wins": 844106,
+      "win_rate": 0.19963880320687505,
+      "total_clicks": 696,
+      "total_spend": 21097724.302302305,
+      "mean_value": 64.37317287613135,
+      "mean_bid": 21.521327922081348,
+      "all_bids_auc": 0.543713281180303,
+      "winners_only_auc": 0.47855333726149396,
+      "ece_quantile": 0.0007946058051846092,
+      "ece_uniform": 0.0009263774071372348,
+      "ieb": 0.6963627165696332
+    },
+    "escm2wc_dr_scale0.5": {
+      "is_variant": true,
+      "surplus": 36999996.76287602,
+      "realized_surplus": 160821252.93693694,
+      "surplus_per_win": 43.56395160736398,
+      "roi": 5.520149420997947,
+      "overpay": 2.7606672564627024,
+      "n_wins": 849326,
+      "win_rate": 0.2008733810356547,
+      "total_clicks": 982,
+      "total_spend": 35578747.06306307,
+      "mean_value": 48.435134359752674,
+      "mean_bid": 24.13854869200237,
+      "all_bids_auc": 0.6850843826447658,
+      "winners_only_auc": 0.5581831677337707,
+      "ece_quantile": 0.0008178583949810179,
+      "ece_uniform": 0.0008178583949810178,
+      "ieb": 0.7715397274594623
+    },
+    "escm2wc_dr_scale1": {
+      "is_variant": true,
+      "surplus": 120831984.55481872,
+      "realized_surplus": 205486066.54454452,
+      "surplus_per_win": 84.7529799864899,
+      "roi": 3.240510888613747,
+      "overpay": 3.38250642846473,
+      "n_wins": 1425696,
+      "win_rate": 0.337190167084263,
+      "total_clicks": 1486,
+      "total_spend": 91713933.45545545,
+      "mean_value": 96.87026871950535,
+      "mean_bid": 43.49501195760259,
+      "all_bids_auc": 0.6850843826447658,
+      "winners_only_auc": 0.5581831677337707,
+      "ece_quantile": 0.0005756827231822544,
+      "ece_uniform": 0.0005756827231822544,
+      "ieb": 0.5430794549189245
+    },
+    "escm2wc_dr_scale2": {
+      "is_variant": true,
+      "surplus": 352850276.28247577,
+      "realized_surplus": 208237947.4294294,
+      "surplus_per_win": 174.2582369645833,
+      "roi": 2.1258414606421936,
+      "overpay": 4.168120640112603,
+      "n_wins": 2024870,
+      "win_rate": 0.4789003080768352,
+      "total_clicks": 1966,
+      "total_spend": 184962052.5705706,
+      "mean_value": 193.7405374390107,
+      "mean_bid": 69.54219929127868,
+      "all_bids_auc": 0.6850843826447658,
+      "winners_only_auc": 0.5581831677337707,
+      "ece_quantile": 0.0005491928804637426,
+      "ece_uniform": 9.133137958472774e-05,
+      "ieb": 0.08615890983784916
+    }
+  },
+  "correlations": {
+    "real_plus_variants": {
+      "n_models": 8,
+      "ieb_vs_neg_surplus": {
+        "pearson": 0.9707004376363378,
+        "spearman": 0.8313253012048192,
+        "n": 8
+      },
+      "ieb_vs_surplus": {
+        "pearson": -0.9707004376363378,
+        "spearman": -0.8313253012048192,
+        "n": 8
+      },
+      "ece_quantile_vs_neg_surplus": {
+        "pearson": 0.6436904698516801,
+        "spearman": 0.9518072289156626,
+        "n": 8
+      },
+      "all_bids_auc_vs_surplus": {
+        "pearson": -0.14968394097940482,
+        "spearman": -0.1913975406339627,
+        "n": 8
+      },
+      "winners_only_auc_vs_surplus": {
+        "pearson": -0.3012050350624038,
+        "spearman": -0.01275983604226418,
+        "n": 8
+      },
+      "ieb_vs_neg_realized_surplus": {
+        "pearson": 0.3485783357114896,
+        "spearman": 0.25301204819277107,
+        "n": 8
+      },
+      "all_bids_auc_vs_realized_surplus": {
+        "pearson": 0.8799672837607305,
+        "spearman": 0.7911098346203791,
+        "n": 8
+      },
+      "winners_only_auc_vs_realized_surplus": {
+        "pearson": 0.7064945784472498,
+        "spearman": 0.6890311462822657,
+        "n": 8
+      }
+    },
+    "real_only": {
+      "n_models": 5,
+      "ieb_vs_neg_surplus": {
+        "pearson": 0.8016543707726623,
+        "spearman": 0.7,
+        "n": 5
+      },
+      "ieb_vs_surplus": {
+        "pearson": -0.8016543707726623,
+        "spearman": -0.7,
+        "n": 5
+      },
+      "ece_quantile_vs_neg_surplus": {
+        "pearson": 0.659010442579725,
+        "spearman": 0.8999999999999998,
+        "n": 5
+      },
+      "all_bids_auc_vs_surplus": {
+        "pearson": -0.6577788432099637,
+        "spearman": -0.19999999999999998,
+        "n": 5
+      },
+      "winners_only_auc_vs_surplus": {
+        "pearson": -0.8954662348130453,
+        "spearman": -0.09999999999999999,
+        "n": 5
+      },
+      "ieb_vs_neg_realized_surplus": {
+        "pearson": 0.1418433390202097,
+        "spearman": -0.3,
+        "n": 5
+      },
+      "all_bids_auc_vs_realized_surplus": {
+        "pearson": 0.9702992614393509,
+        "spearman": 0.9999999999999999,
+        "n": 5
+      },
+      "winners_only_auc_vs_realized_surplus": {
+        "pearson": 0.7836205277415105,
+        "spearman": 0.8999999999999998,
+        "n": 5
+      }
+    }
+  }
+}

@@ -1,5 +1,10 @@
 # First-Price Bid Optimization for RTB — iPinYou
 
+> ⚠️ **Framework current; inputs stale.** The bid-optimization method and surplus formulas here remain
+> valid, but the **SP1 pCTR inputs and IEB numbers are pre-recalibration, original/unfair-split** values.
+> For current calibration→surplus results (Stage B2) see [`redesign_findings.md`](../redesign_findings.md);
+> the frozen metric definitions are in [`evaluation_protocol.md`](../evaluation_protocol.md).
+
 ## Executive Summary
 
 본 프로젝트는 iPinYou RTB 데이터셋의 **4,228,166건 won impression**에 대해 First-price 입찰 최적화를 수행하였다. SP1에서 달성한 **debiased pCTR** (ESCM²-WC(DR), IEB 0.014)을 기반으로 impression value를 계산하고, **Kaplan-Meier CDF** 기반 bid shading과 **PID budget pacing**을 결합하여 `bid(x) = V(x) × shade(x) × pace(t)` 모듈형 입찰 시스템을 구현하였다. iPinYou flat-bid의 surplus **-805M** CPM에서 dual-regime shading의 **+128M** CPM으로 **933M CPM 개선**을 달성하며, win rate를 100%에서 38%로 줄이는 대가로 ROI를 0.74에서 3.26으로 **4.4배** 향상시켰다.

@@ -20,6 +20,145 @@ import pandas as pd
 
 
 # ---------------------------------------------------------------------------
+# Bootstrap inference on realized-surplus GAPS between two strategies/cells
+# ---------------------------------------------------------------------------
+
+class SurplusGapCI(NamedTuple):
+    """Bootstrap CI for the realized-surplus GAP between two cells (A - B)."""
+    point: float       # Σ(s_a - s_b) — the observed gap
+    ci95_lo: float     # 2.5th percentile of the bootstrap gap distribution
+    ci95_hi: float     # 97.5th percentile
+    p_gt_0: float      # fraction of bootstrap replicates with gap > 0
+    n_boot: int        # number of bootstrap replicates
+    method: str        # "paired_poisson" | "cluster"
+
+
+def paired_bootstrap_surplus_gap(
+    s_a: np.ndarray,
+    s_b: np.ndarray,
+    n_boot: int = 2000,
+    seed: int = 0,
+    heavy_cap: int = 20000,
+) -> SurplusGapCI:
+    """Paired Poisson bootstrap CI for the realized-surplus gap Σ(s_a - s_b).
+
+    ``s_a``/``s_b`` are per-row realized-surplus contribution vectors for two
+    cells over the SAME rows (e.g. ``res.clicks*CPC - res.payments`` for cell A
+    and cell B). The bootstrap is PAIRED (same Poisson(1) row weights applied to
+    both), so the common across-row variance cancels and we get the variance of
+    the GAP — the right object when both cells score the identical winner set.
+
+    Efficiency: realized-surplus gap variance is dominated by the few rare
+    CLICKED rows (|d|≈CPC) while the millions of payment-only rows are tiny
+    (|d|≤~floor). So we resample the ``heavy_cap`` largest-|d| rows EXACTLY
+    (Poisson(1)) and approximate the smooth remaining bulk by its CLT normal
+    (Poisson(1)-weighted sum ~ Normal(Σd, Σd²)). Sub-second for n=5.6M.
+
+    Args:
+        s_a, s_b: Per-row surplus contributions, shape ``(n,)`` (aligned rows).
+        n_boot: Bootstrap replicates.
+        seed: RNG seed (reproducible).
+        heavy_cap: # of largest-|d| rows resampled exactly; rest via CLT. If
+            ``>= n`` the whole vector is resampled exactly (no CLT term).
+
+    Returns:
+        :class:`SurplusGapCI` (method="paired_poisson").
+    """
+    d = (np.asarray(s_a, np.float64) - np.asarray(s_b, np.float64))
+    n = d.shape[0]
+    point = float(d.sum())
+    if n == 0:
+        return SurplusGapCI(0.0, 0.0, 0.0, 0.0, n_boot, "paired_poisson")
+
+    rng = np.random.default_rng(seed)
+    k = int(min(heavy_cap, n))
+    if k < n:
+        heavy_idx = np.argpartition(np.abs(d), n - k)[n - k:]
+        is_heavy = np.zeros(n, bool)
+        is_heavy[heavy_idx] = True
+        d_heavy = d[is_heavy]
+        d_bulk = d[~is_heavy]
+    else:
+        d_heavy = d
+        d_bulk = np.zeros(0, np.float64)
+
+    # Heavy rows: exact Poisson(1) resample, chunked over replicates to bound RAM.
+    heavy = np.empty(n_boot, np.float64)
+    chunk = 1000
+    for start in range(0, n_boot, chunk):
+        m = min(chunk, n_boot - start)
+        w = rng.poisson(1.0, size=(m, d_heavy.shape[0])).astype(np.float64)
+        heavy[start:start + m] = w @ d_heavy
+
+    # Bulk: CLT — Poisson(1)-weighted sum of many small terms ~ Normal(Σd, Σd²).
+    if d_bulk.shape[0] > 0:
+        mu = float(d_bulk.sum())
+        sigma = float(np.sqrt((d_bulk ** 2).sum()))
+        bulk = rng.normal(mu, sigma, size=n_boot) if sigma > 0 else np.full(n_boot, mu)
+    else:
+        bulk = 0.0
+
+    gaps = heavy + bulk
+    lo, hi = np.percentile(gaps, [2.5, 97.5])
+    return SurplusGapCI(
+        point=point,
+        ci95_lo=float(lo),
+        ci95_hi=float(hi),
+        p_gt_0=float((gaps > 0.0).mean()),
+        n_boot=n_boot,
+        method="paired_poisson",
+    )
+
+
+def cluster_bootstrap_surplus_gap(
+    s_a: np.ndarray,
+    s_b: np.ndarray,
+    cluster_ids: np.ndarray,
+    n_boot: int = 2000,
+    seed: int = 0,
+) -> SurplusGapCI:
+    """Cluster (e.g. advertiser) bootstrap CI for the surplus gap Σ(s_a - s_b).
+
+    Resamples whole clusters with replacement — the conservative inference when
+    clicks/market dynamics are correlated within a cluster (advertiser). With
+    few advertisers the effective n is small, so this CI is intentionally wide;
+    it is the bound that must exclude 0 for a defensible decision-superiority
+    claim.
+
+    Args:
+        s_a, s_b: Per-row surplus contributions, shape ``(n,)``.
+        cluster_ids: Cluster label per row (e.g. advertiser id), shape ``(n,)``.
+        n_boot: Bootstrap replicates.
+        seed: RNG seed.
+
+    Returns:
+        :class:`SurplusGapCI` (method="cluster").
+    """
+    d = (np.asarray(s_a, np.float64) - np.asarray(s_b, np.float64))
+    point = float(d.sum())
+    if d.shape[0] == 0:
+        return SurplusGapCI(0.0, 0.0, 0.0, 0.0, n_boot, "cluster")
+
+    _, inv = np.unique(np.asarray(cluster_ids), return_inverse=True)
+    g = int(inv.max()) + 1
+    cluster_sums = np.zeros(g, np.float64)
+    np.add.at(cluster_sums, inv, d)
+
+    rng = np.random.default_rng(seed)
+    draws = rng.integers(0, g, size=(n_boot, g))
+    gaps = cluster_sums[draws].sum(axis=1)
+    lo, hi = np.percentile(gaps, [2.5, 97.5])
+    return SurplusGapCI(
+        point=point,
+        ci95_lo=float(lo),
+        ci95_hi=float(hi),
+        p_gt_0=float((gaps > 0.0).mean()),
+        n_boot=n_boot,
+        method="cluster",
+    )
+
+
+# ---------------------------------------------------------------------------
 # Result Types
 # ---------------------------------------------------------------------------
 

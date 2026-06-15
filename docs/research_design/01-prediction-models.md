@@ -1,5 +1,8 @@
 # SP1: 예측 모델 + Win Selection Bias Debiasing
 
+> **현행 결과:** fair-split 재학습·recalibration·Stage B2 결과와 정본 지표 정의는
+> [`../redesign_findings.md`](../redesign_findings.md) · [`../evaluation_protocol.md`](../evaluation_protocol.md) 참조.
+
 ---
 
 ## 개요

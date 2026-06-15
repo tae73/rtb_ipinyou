@@ -401,6 +401,8 @@ def binary_cross_entropy(
     y_pred: jax.Array,
     y_true: jax.Array,
     eps: float = 1e-7,
+    pos_weight: Optional[float] = None,
+    focal_gamma: Optional[float] = None,
 ) -> jax.Array:
     """Binary Cross Entropy for probability inputs (NOT logits)
 
@@ -411,12 +413,31 @@ def binary_cross_entropy(
         y_pred: Predicted probabilities (0-1)
         y_true: Ground truth labels (0 or 1)
         eps: Small value for numerical stability
+        pos_weight: Optional multiplier on the positive (y=1) term. ``None``
+            (default) reproduces standard unweighted BCE. Values >1 up-weight
+            positives — useful for rare-event targets (e.g. 0.1% CTR base rate)
+            where unweighted BCE shrinks predictions toward 0.
+        focal_gamma: Optional focal-loss focusing parameter. ``None`` (default)
+            disables focal modulation. When set, each term is multiplied by
+            ``(1 - p_t) ** gamma`` where ``p_t`` is the model probability of the
+            true class, down-weighting easy (well-classified) examples.
 
     Returns:
         BCE loss per sample
     """
     y_pred = jnp.clip(y_pred, eps, 1.0 - eps)
-    return -(y_true * jnp.log(y_pred) + (1.0 - y_true) * jnp.log(1.0 - y_pred))
+    pos_term = y_true * jnp.log(y_pred)
+    neg_term = (1.0 - y_true) * jnp.log(1.0 - y_pred)
+
+    if focal_gamma is not None:
+        # p_t = p for positives, (1 - p) for negatives; modulate by (1 - p_t)^gamma
+        pos_term = jnp.power(1.0 - y_pred, focal_gamma) * pos_term
+        neg_term = jnp.power(y_pred, focal_gamma) * neg_term
+
+    if pos_weight is not None:
+        pos_term = pos_weight * pos_term
+
+    return -(pos_term + neg_term)
 
 
 def counterfactual_risk(

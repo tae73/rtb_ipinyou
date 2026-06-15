@@ -1,0 +1,59 @@
+{
+  "esmmwc": {
+    "all_bids_auc": 0.6527249428832123,
+    "winners_only_auc": 0.5234146961856146,
+    "easy_neg_gap": 0.1293102466975976,
+    "n": 19424025,
+    "n_win": 4234318,
+    "all_bids_pred": "p_click_bid (p_win*p_ctr)",
+    "winners_pred": "p_ctr (P(click|win))"
+  },
+  "escm2wc_dr": {
+    "all_bids_auc": 0.6850843826447658,
+    "winners_only_auc": 0.5581831677337707,
+    "easy_neg_gap": 0.12690121491099504,
+    "n": 19424025,
+    "n_win": 4234318,
+    "all_bids_pred": "p_click_bid (p_win*p_ctr)",
+    "winners_pred": "p_ctr (P(click|win))"
+  },
+  "escm2wc_dr_extps": {
+    "all_bids_auc": 0.6837458308667554,
+    "winners_only_auc": 0.5602401811830826,
+    "easy_neg_gap": 0.12350564968367284,
+    "n": 19424025,
+    "n_win": 4234318,
+    "all_bids_pred": "p_click_bid (p_win*p_ctr)",
+    "winners_pred": "p_ctr (P(click|win))"
+  },
+  "lr_ctr_all": {
+    "all_bids_auc": 0.7686518536166271,
+    "winners_only_auc": 0.7143831675490268,
+    "easy_neg_gap": 0.05426868606760038,
+    "n": 19424025,
+    "n_win": 4234318,
+    "all_bids_pred": "lr_ctr_all all-bids pCTR",
+    "winners_pred": "lr_ctr_all all-bids pCTR restricted to won subset"
+  },
+  "lgb_ctr_all": {
+    "all_bids_auc": 0.543713281180303,
+    "winners_only_auc": 0.47855333726149396,
+    "easy_neg_gap": 0.06515994391880908,
+    "n": 19424025,
+    "n_win": 4234318,
+    "all_bids_pred": "lgb_ctr_all all-bids pCTR",
+    "winners_pred": "lgb_ctr_all all-bids pCTR restricted to won subset"
+  },
+  "_skew_check": {
+    "lr_ctr_all": {
+      "saved_test_auc": 0.7686518482396896,
+      "recomputed_all_bids_auc": 0.7686518536166271,
+      "abs_diff": 5.37693756186286e-09
+    },
+    "lgb_ctr_all": {
+      "saved_test_auc": 0.5437132569611055,
+      "recomputed_all_bids_auc": 0.543713281180303,
+      "abs_diff": 2.4219197536368142e-08
+    }
+  }
+}

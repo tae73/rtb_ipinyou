@@ -812,6 +812,12 @@ def esmmwc(
         "--joint-weight",
         help="Joint (ESMM) loss weight (1.0 per Ma et al. 2018)",
     ),
+    ctr_pos_weight: Optional[float] = typer.Option(
+        None,
+        "--ctr-pos-weight",
+        help="Positive-class up-weight for the DIRECT winners-CTR BCE term "
+        "(None = unweighted; try ~1/base_rate, capped, to counter under-prediction)",
+    ),
     quiet: bool = typer.Option(
         False,
         "--quiet",
@@ -961,6 +967,7 @@ def esmmwc(
         win_weight=win_weight,
         ctr_weight=ctr_weight,
         joint_weight=joint_weight,
+        ctr_pos_weight=ctr_pos_weight,
         es_metric=es_metric,
         patience=patience,
         use_layer_norm=use_layer_norm,
@@ -1060,6 +1067,12 @@ def escm2wc(
         1.0,
         "--joint-weight",
         help="Joint loss weight (1.0 per Wang et al. 2022)",
+    ),
+    ctr_pos_weight: Optional[float] = typer.Option(
+        None,
+        "--ctr-pos-weight",
+        help="Positive-class up-weight for the CTR BCE term (IPW BCE / DR 'bce' "
+        "pseudo-label; DR 'mse' unaffected). None = unweighted; try ~1/base_rate, capped",
     ),
     impute_loss_weight: float = typer.Option(
         0.5,
@@ -1273,6 +1286,7 @@ def escm2wc(
         win_weight=win_weight,
         ctr_weight=ctr_weight,
         joint_weight=joint_weight,
+        ctr_pos_weight=ctr_pos_weight,
         impute_loss_weight=impute_loss_weight,
         es_metric=es_metric,
         patience=patience,
@@ -1326,6 +1340,7 @@ def _train_wc_model(
     win_weight: float = 1.0,
     ctr_weight: float = 1.0,
     joint_weight: float = 1.0,
+    ctr_pos_weight: Optional[float] = None,
     impute_loss_weight: float = 0.5,
     # Evaluation frequency
     eval_every_n_epochs: int = 1,
@@ -1583,6 +1598,7 @@ def _train_wc_model(
                 win_weight=win_weight,
                 ctr_weight=ctr_weight,
                 joint_weight=joint_weight,
+                ctr_pos_weight=ctr_pos_weight,
                 use_layer_norm=use_layer_norm,
                 use_numeric_bypass=use_numeric_bypass,
                 use_fm_interaction=not use_scalar_input,
@@ -1621,6 +1637,7 @@ def _train_wc_model(
                 win_weight=win_weight,
                 ctr_weight=ctr_weight,
                 joint_weight=joint_weight,
+                ctr_pos_weight=ctr_pos_weight,
                 impute_loss_weight=impute_loss_weight,
                 impute_loss_type=impute_loss_type,
                 impute_huber_delta=impute_huber_delta,
@@ -1729,6 +1746,7 @@ def _train_wc_model(
                 "win_weight": win_weight,
                 "ctr_weight": ctr_weight,
                 "joint_weight": joint_weight,
+                "ctr_pos_weight": ctr_pos_weight,
                 "es_metric": es_metric,
                 "patience": max_patience,
                 "use_layer_norm": use_layer_norm,
@@ -2012,6 +2030,22 @@ def _train_wc_model(
     )
     typer.echo(f"Test predictions saved: {pred_path}")
 
+    # Save per-sample VAL predictions (.npz) — enables a frozen-map val->test
+    # post-hoc isotonic recalibration (fit on val winners, apply to test) at the
+    # next retrain with zero extra GPU. val_df is freed earlier, so labels come
+    # from val_source, sliced to the (drop-remainder-safe) eval length.
+    val_pred_path = model_dir / f"{model_name}_val_predictions.npz"
+    n_val = len(val_pred["p_win"])
+    np.savez_compressed(
+        val_pred_path,
+        p_win=val_pred["p_win"].astype(np.float32),
+        p_ctr=val_pred["p_ctr"].astype(np.float32),
+        p_click_bid=val_pred["p_click_bid"].astype(np.float32),
+        y_win=np.asarray(val_source.win[:n_val]).astype(np.int8),
+        y_click=np.asarray(val_source.click[:n_val]).astype(np.int8),
+    )
+    typer.echo(f"Val predictions saved: {val_pred_path}")
+
     # Win AUC (all bids)
     win_auc_test = compute_metrics(
         test_df["win"].values, test_pred["p_win"]
@@ -2075,6 +2109,7 @@ def _train_wc_model(
             "win_weight": win_weight,
             "ctr_weight": ctr_weight,
             "joint_weight": joint_weight,
+            "ctr_pos_weight": ctr_pos_weight,
             "es_metric": es_metric,
             "patience": max_patience,
             "use_layer_norm": use_layer_norm,

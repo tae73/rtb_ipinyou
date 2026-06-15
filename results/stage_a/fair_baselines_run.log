@@ -1,0 +1,38 @@
+feature_cols (30): ['region', 'city', 'adexchange', 'slotwidth', 'slotheight', 'slotvisibility', 'slotformat', 'advertiser', 'hour', 'minute', 'weekday', 'is_weekend', 'is_peak_hour', 'slot_size_group', 'region_group', 'domain_hash', 'creative_hash', 'slotprice', 'bidprice', 'hour_sin', 'hour_cos', 'slot_area', 'slot_area_log', 'slot_aspect_ratio', 'region_freq', 'bid_floor_ratio', 'domain_freq', 'domain_freq_log', 'creative_freq', 'creative_freq_log']
+categorical (17): ['region', 'city', 'adexchange', 'slotwidth', 'slotheight', 'slotvisibility', 'slotformat', 'advertiser', 'hour', 'minute', 'weekday', 'is_weekend', 'is_peak_hour', 'slot_size_group', 'region_group', 'domain_hash', 'creative_hash']
+Loading FAIR splits via load_feature_splits (zero-skew) ...
+train=90,645,454 val=19,424,024 test=19,424,020
+str/object cols union-coded: ['slot_size_group', 'region_group']
+categorical cols 0-filled (NaN->0, int cast, baseline parity): ['adexchange', 'slotvisibility', 'slotformat']
+train clicks=14,908 (0.000164) | test clicks=4,534 (0.000233) | test won=5,616,945 winners-CTR=0.000803
+
+=== LR_ctr_all ===
+LR fit subsample: 25,000,000 rows (all 14,908 pos + 24,985,092 of 90,630,546 neg) out of 90,645,454 train rows
+LR fit time: 380.8s  n_iter=[16]
+  all-bids AUC=0.6849  winners AUC=0.5540
+
+=== LGB_ctr_all ===
+[LightGBM] [Warning] Met categorical feature which contains sparse values. Consider renumbering to consecutive integers started from zero
+[LightGBM] [Warning] Met negative value in categorical features, will convert it to NaN
+[LightGBM] [Warning] Met negative value in categorical features, will convert it to NaN
+Training until validation scores don't improve for 30 rounds
+[25]	train's auc: 0.89473	val's auc: 0.770789
+Early stopping, best iteration is:
+[14]	train's auc: 0.884594	val's auc: 0.77545
+LGB train time: 300.8s  n_trees=14
+  all-bids AUC=0.7197  winners AUC=0.6321
+
+Saved /home/mail-agent/project/rtb_ipinyou/results/stage_a/fair_baselines.json
+Saved /home/mail-agent/project/rtb_ipinyou/results/stage_a/fair_baseline_preds.npz
+
+Total time: 826.5s
+
+================ FAIR-SPLIT BASELINE SUMMARY ================
+metric                                   LR_ctr_all    LGB_ctr_all
+all-bids AUC                                 0.6849         0.7197
+winners-only AUC                             0.5540         0.6321
+all-bids quantile-ECE                        0.0007         0.0002
+winners quantile-ECE                         0.0005         0.0005
+winners IEB                                  0.4355         0.4755
+
+VERDICT: LR winners-AUC dropped 0.714 -> 0.554 (Δ=+0.160) on the FAIR split. CONFIRMED: the old 0.714 was the unseen-advertiser-2997 / disjoint-vocab artifact. Note: advertiser 2997 does NOT appear in the FAIR test WON subset (won advertisers = [1458, 3358, 3386, 3427, 3476]), so within-test between-advertiser CTR spread is now narrow and the 2997 ranking axis is absent.

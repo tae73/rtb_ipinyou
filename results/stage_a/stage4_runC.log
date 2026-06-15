@@ -1,0 +1,39 @@
+### RUN C (dr-bce, pos_weight=2) 2026. 06. 15. (월) 19:58:58 KST
+### C exit=0 2026. 06. 15. (월) 20:24:23 KST
+### C metrics: ctr_auc 0.5194 ctr_ieb 160.7902 best_ep 3
+### HARNESS on all 4 models 2026. 06. 15. (월) 20:24:23 KST
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:356: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:295: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:356: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:295: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:356: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:295: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:356: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:295: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+Loading fair-test covariates ...
+== fair_baseline (results/models/escm2wc_dr_fair_posw) ==
+   (no val predictions — frozen_val2test unavailable for fair_baseline)
+   native: IEB 0.5967 AUC 0.6581 maxHardAdv 0.7086 | crossfit IEB 0.0
+== A2_relax_jw003 (results/models/stage4_jw003) ==
+   native: IEB 0.7776 AUC 0.638 maxHardAdv 0.8521 | crossfit IEB 0.0 | frozen IEB 0.0566 maxHardAdv 0.2877
+== B2_pw20 (results/models/stage4_drbce_pw20) ==
+   NOTE B2_pw20/frozen_val2test: AUC drift 0.0169 (>5e-3)
+   NOTE B2_pw20/crossfit: AUC drift 0.0163 (>5e-3)
+   native: IEB 728.6422 AUC 0.5368 maxHardAdv 837.3274 | crossfit IEB 0.0 | frozen IEB 0.0251 maxHardAdv 0.3016
+== C_pw2 (results/models/stage4_drbce_pw2) ==
+   NOTE C_pw2/frozen_val2test: AUC drift 0.0085 (>5e-3)
+   NOTE C_pw2/crossfit: AUC drift 0.0190 (>5e-3)
+   native: IEB 160.7902 AUC 0.5194 maxHardAdv 89.0076 | crossfit IEB 0.0 | frozen IEB 0.0473 maxHardAdv 0.2272
+
+VERDICT: NEGATIVE (acceptable): no training run beats the global-isotonic per-advertiser ceiling (0.226) without losing ranking/over-predicting. Post-hoc cross-fit isotonic remains the recommended calibration path (rank-preserving, leak-free, 1-line, GPU 0).
+Wrote /home/mail-agent/project/rtb_ipinyou/results/stage_a/stage4_calibration.json
+Wrote /home/mail-agent/project/rtb_ipinyou/results/stage_a/stage4_calibration_summary.md
+### harness exit=0 2026. 06. 15. (월) 20:45:26 KST

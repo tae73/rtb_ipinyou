@@ -1,0 +1,28 @@
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:356: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:356: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:295: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:356: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:356: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:295: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:356: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:356: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:295: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+Loading winners predictions + covariates ...
+  winners=5,616,945  clicks=4,512  advertisers=[1458, 3358, 3386, 3427, 3476]
+  neural  per-adv max IEB: raw 0.7086 | global 0.2263 | segment 0.0006  (within-adv AUC raw 0.66 -> seg 0.6568)
+  lr      per-adv max IEB: raw 0.8233 | global 0.2837 | segment 0.0003  (within-adv AUC raw 0.5455 -> seg 0.5467)
+  lgb     per-adv max IEB: raw 0.7376 | global 0.2716 | segment 0.0002  (within-adv AUC raw 0.6226 -> seg 0.6265)
+
+VERDICT [CALIBRATION_WIN_DECISION_NEUTRAL]: Per-advertiser calibration drives neural max residual 0.2263->0.0006 (fixes the one gap no global map could), BUT realized-surplus gap vs global is decision-neutral (cluster CI [-1766966.8, 19149874.2] contains 0) — the residual was a calibration nicety, not a bidding lever on won-only inventory.
+Wrote /home/mail-agent/project/rtb_ipinyou/results/stage_a/segment_calibration.json
+Wrote /home/mail-agent/project/rtb_ipinyou/results/stage_a/segment_recalibrated_winners_preds.npz
+Wrote /home/mail-agent/project/rtb_ipinyou/results/stage_a/segment_calibration_summary.md

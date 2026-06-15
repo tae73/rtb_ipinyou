@@ -14,10 +14,15 @@ from src.distributed.data_loader import (
 )
 from src.distributed.mesh import (
     MeshConfig,
+    GpuMemInfo,
     create_mesh,
     get_data_sharding,
     get_replicated_sharding,
     is_distributed,
+    pick_devices,
+    select_free_devices,
+    get_mesh_devices,
+    DEFAULT_FREE_MIB_THRESHOLD,
 )
 from src.distributed.train_state import (
     create_lr_schedule,
@@ -39,10 +44,15 @@ __all__ = [
     "batch_to_jax",
     # Mesh
     "MeshConfig",
+    "GpuMemInfo",
     "create_mesh",
     "get_data_sharding",
     "get_replicated_sharding",
     "is_distributed",
+    "pick_devices",
+    "select_free_devices",
+    "get_mesh_devices",
+    "DEFAULT_FREE_MIB_THRESHOLD",
     # Train state
     "create_lr_schedule",
     "create_optimizer",

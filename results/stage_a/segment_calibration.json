@@ -1,0 +1,386 @@
+{
+  "verdict": {
+    "verdict": "CALIBRATION_WIN_DECISION_NEUTRAL",
+    "statement": "Per-advertiser calibration drives neural max residual 0.2263->0.0006 (fixes the one gap no global map could), BUT realized-surplus gap vs global is decision-neutral (cluster CI [-1766966.8, 19149874.2] contains 0) \u2014 the residual was a calibration nicety, not a bidding lever on won-only inventory.",
+    "neural_global_max_resid": 0.2263,
+    "neural_segment_max_resid": 0.0006,
+    "global_ceiling": 0.226
+  },
+  "models": {
+    "neural": {
+      "calibration": {
+        "raw": {
+          "global_ieb": 0.5967,
+          "global_auc": 0.6581,
+          "within_adv_auc": 0.66,
+          "quantile_ece": 0.000479,
+          "per_advertiser_ieb": {
+            "1458": 0.5867,
+            "3358": 0.7086,
+            "3386": 0.6973,
+            "3427": 0.5209,
+            "3476": 0.5391
+          },
+          "max_per_adv_ieb": 0.7086,
+          "per_advertiser_auc": {
+            "1458": 0.6187,
+            "3358": 0.6572,
+            "3386": 0.6885,
+            "3427": 0.6655,
+            "3476": 0.6777
+          }
+        },
+        "global": {
+          "global_ieb": 0.0,
+          "global_auc": 0.6564,
+          "within_adv_auc": 0.658,
+          "quantile_ece": 2.6e-05,
+          "per_advertiser_ieb": {
+            "1458": 0.0073,
+            "3358": 0.2085,
+            "3386": 0.1553,
+            "3427": 0.0851,
+            "3476": 0.2263
+          },
+          "max_per_adv_ieb": 0.2263,
+          "per_advertiser_auc": {
+            "1458": 0.6153,
+            "3358": 0.6554,
+            "3386": 0.6903,
+            "3427": 0.6632,
+            "3476": 0.6731
+          }
+        },
+        "segment": {
+          "global_ieb": 0.0,
+          "global_auc": 0.6655,
+          "within_adv_auc": 0.6568,
+          "quantile_ece": 3.5e-05,
+          "per_advertiser_ieb": {
+            "1458": 0.0,
+            "3358": 0.0006,
+            "3386": 0.0001,
+            "3427": 0.0,
+            "3476": 0.0
+          },
+          "max_per_adv_ieb": 0.0006,
+          "per_advertiser_auc": {
+            "1458": 0.6117,
+            "3358": 0.6549,
+            "3386": 0.6852,
+            "3427": 0.6643,
+            "3476": 0.676
+          }
+        }
+      },
+      "surplus_segment_vs_global": {
+        "exchange_optimal": {
+          "point": -4708872.4,
+          "paired_ci95": [
+            -10846311.4,
+            1230080.8
+          ],
+          "paired_p_gt_0": 0.0523,
+          "cluster_ci95": [
+            -12428644.6,
+            2932538.6
+          ],
+          "cluster_p_gt_0": 0.132,
+          "global_surplus": 264751906.8,
+          "segment_surplus": 260043034.5
+        },
+        "dual_regime": {
+          "point": 7382028.2,
+          "paired_ci95": [
+            2164380.8,
+            12446961.4
+          ],
+          "paired_p_gt_0": 0.9977,
+          "cluster_ci95": [
+            -1766966.8,
+            19149874.2
+          ],
+          "cluster_p_gt_0": 0.9357,
+          "global_surplus": 206044204.6,
+          "segment_surplus": 213426232.7,
+          "per_adv_delta": {
+            "1458": -986798.2,
+            "3358": 1224514.8,
+            "3386": 6002781.3,
+            "3427": 1172617.3,
+            "3476": -31087.1
+          }
+        },
+        "truthful": {
+          "point": 13089124.3,
+          "paired_ci95": [
+            6672235.2,
+            19607291.1
+          ],
+          "paired_p_gt_0": 1.0,
+          "cluster_ci95": [
+            -43465299.3,
+            69643548.0
+          ],
+          "cluster_p_gt_0": 0.6777,
+          "global_surplus": -7259847.0,
+          "segment_surplus": 5829277.3
+        }
+      }
+    },
+    "lr": {
+      "calibration": {
+        "raw": {
+          "global_ieb": 0.4355,
+          "global_auc": 0.554,
+          "within_adv_auc": 0.5455,
+          "quantile_ece": 0.000547,
+          "per_advertiser_ieb": {
+            "1458": 0.8233,
+            "3358": 0.1445,
+            "3386": 0.4175,
+            "3427": 0.2626,
+            "3476": 0.5272
+          },
+          "max_per_adv_ieb": 0.8233,
+          "per_advertiser_auc": {
+            "1458": 0.4745,
+            "3358": 0.603,
+            "3386": 0.5725,
+            "3427": 0.5868,
+            "3476": 0.5034
+          }
+        },
+        "global": {
+          "global_ieb": 0.0,
+          "global_auc": 0.5581,
+          "within_adv_auc": 0.5491,
+          "quantile_ece": 1.6e-05,
+          "per_advertiser_ieb": {
+            "1458": 0.0999,
+            "3358": 0.1528,
+            "3386": 0.0217,
+            "3427": 0.0414,
+            "3476": 0.2837
+          },
+          "max_per_adv_ieb": 0.2837,
+          "per_advertiser_auc": {
+            "1458": 0.4985,
+            "3358": 0.597,
+            "3386": 0.5687,
+            "3427": 0.583,
+            "3476": 0.505
+          }
+        },
+        "segment": {
+          "global_ieb": 0.0,
+          "global_auc": 0.5766,
+          "within_adv_auc": 0.5467,
+          "quantile_ece": 4.1e-05,
+          "per_advertiser_ieb": {
+            "1458": 0.0,
+            "3358": 0.0003,
+            "3386": 0.0001,
+            "3427": 0.0,
+            "3476": 0.0001
+          },
+          "max_per_adv_ieb": 0.0003,
+          "per_advertiser_auc": {
+            "1458": 0.4806,
+            "3358": 0.5951,
+            "3386": 0.5694,
+            "3427": 0.5853,
+            "3476": 0.5127
+          }
+        }
+      },
+      "surplus_segment_vs_global": {
+        "exchange_optimal": {
+          "point": -741781.4,
+          "paired_ci95": [
+            -5766273.8,
+            4486084.4
+          ],
+          "paired_p_gt_0": 0.3857,
+          "cluster_ci95": [
+            -13229896.0,
+            11746333.2
+          ],
+          "cluster_p_gt_0": 0.408,
+          "global_surplus": 209900948.9,
+          "segment_surplus": 209159167.5
+        },
+        "dual_regime": {
+          "point": 6057305.0,
+          "paired_ci95": [
+            1799461.6,
+            10193007.8
+          ],
+          "paired_p_gt_0": 0.9987,
+          "cluster_ci95": [
+            -987230.1,
+            13331133.5
+          ],
+          "cluster_p_gt_0": 0.9527,
+          "global_surplus": 181795523.8,
+          "segment_surplus": 187852828.9,
+          "per_adv_delta": {
+            "1458": -837812.9,
+            "3358": 298871.6,
+            "3386": 194762.0,
+            "3427": 2861460.3,
+            "3476": 3540024.0
+          }
+        },
+        "truthful": {
+          "point": 7198716.0,
+          "paired_ci95": [
+            2166183.5,
+            12172439.3
+          ],
+          "paired_p_gt_0": 0.9957,
+          "cluster_ci95": [
+            -53310539.5,
+            66200509.0
+          ],
+          "cluster_p_gt_0": 0.6087,
+          "global_surplus": -19839316.3,
+          "segment_surplus": -12640600.3
+        }
+      }
+    },
+    "lgb": {
+      "calibration": {
+        "raw": {
+          "global_ieb": 0.4755,
+          "global_auc": 0.6321,
+          "within_adv_auc": 0.6226,
+          "quantile_ece": 0.000543,
+          "per_advertiser_ieb": {
+            "1458": 0.694,
+            "3358": 0.7376,
+            "3386": 0.5659,
+            "3427": 0.0803,
+            "3476": 0.6767
+          },
+          "max_per_adv_ieb": 0.7376,
+          "per_advertiser_auc": {
+            "1458": 0.5635,
+            "3358": 0.6883,
+            "3386": 0.6317,
+            "3427": 0.6481,
+            "3476": 0.6155
+          }
+        },
+        "global": {
+          "global_ieb": 0.0,
+          "global_auc": 0.6337,
+          "within_adv_auc": 0.6245,
+          "quantile_ece": 2.7e-05,
+          "per_advertiser_ieb": {
+            "1458": 0.0665,
+            "3358": 0.0861,
+            "3386": 0.0031,
+            "3427": 0.1253,
+            "3476": 0.2716
+          },
+          "max_per_adv_ieb": 0.2716,
+          "per_advertiser_auc": {
+            "1458": 0.5663,
+            "3358": 0.6872,
+            "3386": 0.629,
+            "3427": 0.6541,
+            "3476": 0.6148
+          }
+        },
+        "segment": {
+          "global_ieb": 0.0001,
+          "global_auc": 0.649,
+          "within_adv_auc": 0.6265,
+          "quantile_ece": 3.9e-05,
+          "per_advertiser_ieb": {
+            "1458": 0.0002,
+            "3358": 0.0,
+            "3386": 0.0001,
+            "3427": 0.0001,
+            "3476": 0.0002
+          },
+          "max_per_adv_ieb": 0.0002,
+          "per_advertiser_auc": {
+            "1458": 0.5601,
+            "3358": 0.6887,
+            "3386": 0.6351,
+            "3427": 0.6599,
+            "3476": 0.6162
+          }
+        }
+      },
+      "surplus_segment_vs_global": {
+        "exchange_optimal": {
+          "point": 11844995.9,
+          "paired_ci95": [
+            4602040.6,
+            18728372.3
+          ],
+          "paired_p_gt_0": 0.9993,
+          "cluster_ci95": [
+            -4577816.3,
+            32740928.2
+          ],
+          "cluster_p_gt_0": 0.9033,
+          "global_surplus": 240382226.1,
+          "segment_surplus": 252227221.9
+        },
+        "dual_regime": {
+          "point": 12874791.0,
+          "paired_ci95": [
+            7418340.8,
+            18108986.3
+          ],
+          "paired_p_gt_0": 1.0,
+          "cluster_ci95": [
+            8849746.8,
+            17326328.5
+          ],
+          "cluster_p_gt_0": 1.0,
+          "global_surplus": 188181970.0,
+          "segment_surplus": 201056761.0,
+          "per_adv_delta": {
+            "1458": 1729817.2,
+            "3358": 4066283.6,
+            "3386": 1951212.5,
+            "3427": 1719449.9,
+            "3476": 3408027.8
+          }
+        },
+        "truthful": {
+          "point": 10528012.9,
+          "paired_ci95": [
+            4385203.0,
+            16480552.0
+          ],
+          "paired_p_gt_0": 0.9997,
+          "cluster_ci95": [
+            -32081428.5,
+            63713271.3
+          ],
+          "cluster_p_gt_0": 0.6397,
+          "global_surplus": -14046562.9,
+          "segment_surplus": -3518550.0
+        }
+      }
+    }
+  },
+  "_meta": {
+    "cpc_target": 200000.0,
+    "advertisers": [
+      "1458",
+      "3358",
+      "3386",
+      "3427",
+      "3476"
+    ],
+    "n_winners": 5616945,
+    "n_clicks": 4512
+  }
+}

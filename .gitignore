@@ -29,6 +29,7 @@ results/models/
 *.parquet
 *.npz
 *.bz2
+*.joblib
 
 # Environment
 .env

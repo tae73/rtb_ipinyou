@@ -1,5 +1,10 @@
 # Multi-Task Debiasing을 활용한 RTB Win/CTR Prediction: iPinYou 사례 연구
 
+> ⚠️ **SUPERSEDED (pre-redesign).** This report uses the **original/unfair disjoint-advertiser split**
+> and **pre-recalibration** numbers (e.g. LR 0.7687 / ESMM 0.6905); those headline AUC results were
+> later shown to be an evaluation artifact. **Current results → [`redesign_findings.md`](../redesign_findings.md);
+> frozen evaluation protocol → [`evaluation_protocol.md`](../evaluation_protocol.md).** Body retained as history.
+
 ## 요약
 
 본 프로젝트는 Real-Time Bidding (RTB) 환경에서 win selection bias를 진단하고 multi-task debiasing으로 unbiased CTR prediction을 달성하며, calibration 차이가 bidding revenue에 미치는 경제적 영향을 정량화한다. iPinYou RTB 데이터셋을 활용하여 Bid→Win→Click 퍼널을 ESMM-WC와 ESCM²-WC(DR) 프레임워크로 모델링하였다.

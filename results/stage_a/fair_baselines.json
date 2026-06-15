@@ -1,0 +1,161 @@
+{
+  "split": "features_fair (per_advertiser_temporal_0.70_0.15_0.15)",
+  "target": "ctr_all (all-bids click)",
+  "feature_cols": [
+    "region",
+    "city",
+    "adexchange",
+    "slotwidth",
+    "slotheight",
+    "slotvisibility",
+    "slotformat",
+    "advertiser",
+    "hour",
+    "minute",
+    "weekday",
+    "is_weekend",
+    "is_peak_hour",
+    "slot_size_group",
+    "region_group",
+    "domain_hash",
+    "creative_hash",
+    "slotprice",
+    "bidprice",
+    "hour_sin",
+    "hour_cos",
+    "slot_area",
+    "slot_area_log",
+    "slot_aspect_ratio",
+    "region_freq",
+    "bid_floor_ratio",
+    "domain_freq",
+    "domain_freq_log",
+    "creative_freq",
+    "creative_freq_log"
+  ],
+  "n_features": 30,
+  "sizes": {
+    "train": 90645454,
+    "val": 19424024,
+    "test": 19424020
+  },
+  "test_clicks": 4534,
+  "test_won": 5616945,
+  "test_winners_ctr": 0.0008032836354993684,
+  "test_won_advertisers": [
+    1458,
+    3358,
+    3386,
+    3427,
+    3476
+  ],
+  "LR_ctr_all": {
+    "all_bids_auc": 0.6849415050779962,
+    "winners_auc": 0.5540208483279839,
+    "all_bids_quantile_ece": 0.0006634372524640087,
+    "winners_quantile_ece": 0.0005472622255031024,
+    "all_bids_ieb": 2.8422186270073846,
+    "winners_ieb": 0.43546755059550707,
+    "all_bids_pred_mean": 0.0008968596230261028,
+    "all_bids_true_mean": 0.00023342232967223057,
+    "winners_pred_mean": 0.0011530875926837325,
+    "winners_true_mean": 0.0008032836354993684,
+    "per_advertiser_winners_auc": {
+      "1458": {
+        "n_won": 1356869,
+        "n_click": 1172,
+        "ctr": 0.0008637532436808564,
+        "winners_auc": 0.47450446890635234
+      },
+      "3358": {
+        "n_won": 444568,
+        "n_click": 412,
+        "ctr": 0.000926742365622357,
+        "winners_auc": 0.602987846393863
+      },
+      "3386": {
+        "n_won": 1135250,
+        "n_click": 1012,
+        "ctr": 0.0008914336049328341,
+        "winners_auc": 0.5725298958698444
+      },
+      "3427": {
+        "n_won": 1836142,
+        "n_click": 1410,
+        "ctr": 0.0007679144641318591,
+        "winners_auc": 0.5868021971570377
+      },
+      "3476": {
+        "n_won": 844116,
+        "n_click": 506,
+        "ctr": 0.000599443678357003,
+        "winners_auc": 0.503409177001549
+      }
+    },
+    "winners_auc_excl_decisive_adv": {
+      "advertiser_excluded": 2997,
+      "note": "advertiser 2997 not present in FAIR test WON subset; won advertisers = [1458, 3358, 3386, 3427, 3476]"
+    },
+    "lr_fit_subsample_rows": 25000000,
+    "lr_n_iter": 16
+  },
+  "LGB_ctr_all": {
+    "all_bids_auc": 0.719719370735905,
+    "winners_auc": 0.6321273280110161,
+    "all_bids_quantile_ece": 0.00017183552192074554,
+    "winners_quantile_ece": 0.0005431602208885711,
+    "all_bids_ieb": 0.27980017951232833,
+    "winners_ieb": 0.475537240347992,
+    "all_bids_pred_mean": 0.00029873393941670656,
+    "all_bids_true_mean": 0.00023342232967223057,
+    "winners_pred_mean": 0.00042129235225729644,
+    "winners_true_mean": 0.0008032836354993684,
+    "per_advertiser_winners_auc": {
+      "1458": {
+        "n_won": 1356869,
+        "n_click": 1172,
+        "ctr": 0.0008637532436808564,
+        "winners_auc": 0.5634821520885063
+      },
+      "3358": {
+        "n_won": 444568,
+        "n_click": 412,
+        "ctr": 0.000926742365622357,
+        "winners_auc": 0.6883202586828366
+      },
+      "3386": {
+        "n_won": 1135250,
+        "n_click": 1012,
+        "ctr": 0.0008914336049328341,
+        "winners_auc": 0.6316735920499972
+      },
+      "3427": {
+        "n_won": 1836142,
+        "n_click": 1410,
+        "ctr": 0.0007679144641318591,
+        "winners_auc": 0.6481203964424634
+      },
+      "3476": {
+        "n_won": 844116,
+        "n_click": 506,
+        "ctr": 0.000599443678357003,
+        "winners_auc": 0.615502590434212
+      }
+    },
+    "winners_auc_excl_decisive_adv": {
+      "advertiser_excluded": 2997,
+      "note": "advertiser 2997 not present in FAIR test WON subset; won advertisers = [1458, 3358, 3386, 3427, 3476]"
+    },
+    "lgb_n_trees": 14
+  },
+  "verdict": {
+    "old_adversarial_split_LR_winners_auc": 0.7144,
+    "fair_split_LR_winners_auc": 0.5540208483279839,
+    "LR_winners_auc_drop": 0.1603791516720161,
+    "old_adversarial_split_LGB_winners_auc": 0.4786,
+    "fair_split_LGB_winners_auc": 0.6321273280110161,
+    "decisive_advertiser_2997_in_test_won": false,
+    "confirmed_artifact": true,
+    "statement": "LR winners-AUC dropped 0.714 -> 0.554 (\u0394=+0.160) on the FAIR split. CONFIRMED: the old 0.714 was the unseen-advertiser-2997 / disjoint-vocab artifact. Note: advertiser 2997 does NOT appear in the FAIR test WON subset (won advertisers = [1458, 3358, 3386, 3427, 3476]), so within-test between-advertiser CTR spread is now narrow and the 2997 ranking axis is absent."
+  }
+}

@@ -1,0 +1,12 @@
+Loading predictions + covariates ...
+  rows=19,424,020 winrate=0.289 clicks=4,534 market segments=7
+Building market model F(b|x) (KM per exchange×floor) ...
+  P2: logged-policy value 4.554e+08 vs realized-clean 4.554e+08 (match=True); 69,568 payprice>bidprice anomalies excluded (8.38e+06)
+  neural truthful V(π)=4.390e+08  exact=4.369e+08 model=2.086e+06 (modeled 0.5% of |value|, 3.695% rows)
+  lr     truthful V(π)=4.170e+08  exact=4.139e+08 model=3.079e+06 (modeled 0.7% of |value|, 1.601% rows)
+  lgb    truthful V(π)=4.293e+08  exact=4.278e+08 model=1.516e+06 (modeled 0.4% of |value|, 3.087% rows)
+  P1: market-model F(b|x) in Wilson CI on 13% of 15 (segment×bid) cells
+
+VERDICT: Full-inventory second-price truthful-bidding value: neural−lgb = 9.687e+06 (cluster CI [-16364172.9, 46797983.0], p=0.659). MOSTLY OBSERVABLE: ≤0.7% of value is extrapolated (the rest is EXACT second-price surplus). P2 sanity holds (estimator reproduces realized surplus on the logged policy).
+Wrote /home/mail-agent/project/rtb_ipinyou/results/stage_a/policy_value.json
+Wrote /home/mail-agent/project/rtb_ipinyou/results/stage_a/policy_value_summary.md

@@ -1,0 +1,28 @@
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:356: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:356: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:356: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+/home/mail-agent/project/rtb_ipinyou/src/bidding/shading.py:295: RuntimeWarning: divide by zero encountered in divide
+  shading_factors = np.where(values > 0, bids / values, 0.0)
+Loading recalibrated winners + fair-test covariates ...
+  winners kept=5,616,873 (dropped 72 payprice==0)  clicks=4,512
+  assertions OK: AUC drift <5e-3; mean V_recal equalized ~160.7 CPM
+strategy=exchange_optimal ...
+    neural  raw surplus=1.442e+08  recal surplus=2.648e+08
+    lr      raw surplus=8.373e+07  recal surplus=2.099e+08
+    lgb     raw surplus=7.499e+07  recal surplus=2.404e+08
+strategy=dual_regime ...
+    neural  raw surplus=1.243e+08  recal surplus=2.060e+08
+    lr      raw surplus=1.532e+08  recal surplus=1.818e+08
+    lgb     raw surplus=6.852e+07  recal surplus=1.882e+08
+strategy=truthful ...
+    neural  raw surplus=1.752e+08  recal surplus=-7.260e+06
+    lr      raw surplus=-1.538e+08  recal surplus=-1.984e+07
+    lgb     raw surplus=1.123e+08  recal surplus=-1.405e+07
+
+Wrote /home/mail-agent/project/rtb_ipinyou/results/stage_a/stage_b2_surplus.json
+Wrote /home/mail-agent/project/rtb_ipinyou/results/stage_a/stage_b2_surplus_summary.md
+
+VERDICT: thesis_supported=True  dual_regime neural−lgb=1.786e+07 cluster_CI=[8421378.5, 27110436.2] p=1.0

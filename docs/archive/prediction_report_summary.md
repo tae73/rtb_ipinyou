@@ -1,5 +1,10 @@
 # Multi-Task Debiasing for RTB Win/CTR Prediction — iPinYou
 
+> ⚠️ **SUPERSEDED (pre-redesign).** This summary uses the **original/unfair disjoint-advertiser split**
+> and **pre-recalibration** numbers (e.g. LR 0.7687 / ESMM 0.6905); those headline AUC results were
+> later shown to be an evaluation artifact. **Current results → [`redesign_findings.md`](../redesign_findings.md);
+> frozen evaluation protocol → [`evaluation_protocol.md`](../evaluation_protocol.md).** Body retained as history.
+
 ## Executive Summary
 
 본 프로젝트는 **129.5M bids × 30.6M impressions** RTB 데이터에서 **Win Selection Bias를 진단·정량화**하고, Multi-task Debiasing (ESMM-WC / ESCM²-WC(DR))으로 **unbiased CTR prediction**을 달성하며, Calibration 차이가 bidding revenue에 미치는 **경제적 영향을 정량화**한 연구이다. Bid→Win→Click 퍼널의 **Win Tower Dual Purpose** 설계로 CTR debiasing과 bid shading을 동시에 해결한다.
