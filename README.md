@@ -93,6 +93,9 @@ iPinYou RTB Dataset (2013):
 - Season 2: 2013.06 (with usertag)
 - Season 3: 2013.10 (with usertag)
 
+데이터 디렉토리 레이아웃·형태·취득/복원 방법은 [docs/data_setup.md](docs/data_setup.md) 참고
+(`data/`는 git-ignored이며 RAW는 외장 드라이브에 보관).
+
 ## References
 
 - Wang et al., "ESCM²: Entire Space Counterfactual Multi-Task Model for Post-Click Conversion Rate Estimation" (SIGIR 2022)
