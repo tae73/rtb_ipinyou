@@ -173,6 +173,45 @@ neural−LR +22.0M (cluster CI excludes 0), neural−LGB +9.7M (cluster CI conta
 records a **NO-GO** for lost-inventory extrapolation: the contextual market model `F(b|x)` calibrates on
 only 13% of cells (flat-bid logging makes it unidentifiable) — but with ≤0.74% modeled it barely binds.
 
+### 5.6 Ablation ladder (fair split)
+
+<p align="center">
+  <img src="../results/figures/portfolio/fig_ablation_ladder.png" alt="Ablation ladder" width="860">
+</p>
+
+ESMM-WC and ESCM²-WC(IPW) were retrained on the fair split (2026-06) to close the headline ladder on one
+split, with held-constant CTR supervision (ctr_weight=1, pos_weight=50, joint=0.1, embed=16) so only the
+debiasing mechanism varies. Winners-only AUC: LR 0.554 · LGB 0.632 · **ESMM-WC 0.674 · IPW 0.656 · DR
+0.658**. The neural variants cluster ~0.66 (all beat LR, at/above LGB); ESMM-WC edges raw AUC but at
+catastrophic raw calibration (IEB −37.8, the direct-BCE+pos_weight over-prediction), and **every rung
+recalibrates to IEB ≈ 0** regardless of raw (range −38 to +0.6). DR is primary for its calibration→
+decision pipeline, not for maximizing AUC — an honest, clustered ladder rather than a clean monotone one.
+
+### 5.7 Bid-shading & budget pacing (fair split, canonical)
+
+<p align="center">
+  <img src="../results/figures/portfolio/fig_bidding_strategies.png" alt="Bid shading strategies" width="840">
+</p>
+
+Re-run on the fair split (recalibrated neural pCTR, second-price), `truthful` (2p-optimal) tops realized
+surplus at **5.13e8**; the linear α-sweep traces the win-rate/cost tradeoff (surplus ↑, ROI 3.40→2.42 as
+α 0.4→1.0). A PID **budget pacing** controller shows WR-weighted hourly allocation lifts surplus
+**+11–14%** over uniform across budget levels. These replace the original/unfair-split
+`results/bidding/*` (advertisers 2259/2261/2821/2997).
+
+### 5.8 Causal exploration (CATE + SCM/DAG) — *hypothesis-generating*
+
+<p align="center">
+  <img src="../results/figures/portfolio/fig_scm.png" alt="SCM DAG and refutation" width="780">
+</p>
+
+Treating bid as treatment on the fair split: a naive within-advertiser contrast gives τ_surplus **+21**
+CPM (volume channel NIE −22.7, cost channel NDE +43.7) with a *negative* τ_win (−0.33) — a confounding
+artifact; and a DoWhy backdoor estimate gives **bid → surplus −0.066** (CI [−0.077, −0.057]), **bid →
+win −0.0007**, with all three refutation tests (random-common-cause, placebo, data-subset) **robust**.
+These are **not identified causal claims** — iPinYou's flat-bid logging and won-only censoring put a
+credible bid-causal estimate at the data ceiling (the P1 NO-GO of §5.5). Reported as exploratory.
+
 ## 6. Limitations
 
 - **Won-only is a conservative lower bound** — lost inventory is untestable (P1 NO-GO above).

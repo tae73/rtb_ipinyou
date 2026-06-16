@@ -1,0 +1,78 @@
+{
+  "_meta": {
+    "split": "features_fair (per-advertiser temporal, shared vocab)",
+    "object": "winners-only AUC = P(click|win), the object bidding ranks on",
+    "neural_shared_config": {
+      "embed_dim": 16,
+      "hidden_dims": [
+        128,
+        64
+      ],
+      "win_hidden_dims": [
+        64,
+        32
+      ],
+      "ctr_weight": 1.0,
+      "ctr_pos_weight": 50,
+      "joint_weight": 0.1,
+      "batch_size": 65536,
+      "lr": 0.0005,
+      "epochs": 50,
+      "patience": 10
+    },
+    "recal": "cross-fit isotonic (K=5, leak-free), winners pCTR",
+    "note": "Held-constant CTR supervision across neural rungs; only the debiasing mechanism varies. ESMM-WC + IPW retrained on the fair split (2026-06) to close the ladder."
+  },
+  "ladder": [
+    {
+      "label": "LR (ctr_all)",
+      "mechanism": "biased baseline (linear)",
+      "winners_auc": 0.554,
+      "winners_ieb_raw": -0.4355,
+      "winners_ieb_recal": 0.0,
+      "winners_auc_recal": 0.5581,
+      "n_winners": 5616945,
+      "n_clicks": 4512
+    },
+    {
+      "label": "LGB (ctr_all)",
+      "mechanism": "biased baseline (GBM)",
+      "winners_auc": 0.6321,
+      "winners_ieb_raw": 0.4755,
+      "winners_ieb_recal": -0.0,
+      "winners_auc_recal": 0.6337,
+      "n_winners": 5616945,
+      "n_clicks": 4512
+    },
+    {
+      "label": "ESMM-WC",
+      "mechanism": "ESMM joint constraint (implicit)",
+      "winners_auc": 0.6742,
+      "winners_ieb_raw": -37.7645,
+      "winners_ieb_recal": -0.0,
+      "winners_auc_recal": 0.6739,
+      "n_winners": 5616945,
+      "n_clicks": 4512
+    },
+    {
+      "label": "ESCM\u00b2-WC (IPW)",
+      "mechanism": "inverse-propensity weighting",
+      "winners_auc": 0.6564,
+      "winners_ieb_raw": -32.456,
+      "winners_ieb_recal": -0.0001,
+      "winners_auc_recal": 0.657,
+      "n_winners": 5616945,
+      "n_clicks": 4512
+    },
+    {
+      "label": "ESCM\u00b2-WC (DR)",
+      "mechanism": "doubly robust (primary)",
+      "winners_auc": 0.6581,
+      "winners_ieb_raw": 0.5967,
+      "winners_ieb_recal": 0.0,
+      "winners_auc_recal": 0.6564,
+      "n_winners": 5616945,
+      "n_clicks": 4512
+    }
+  ]
+}

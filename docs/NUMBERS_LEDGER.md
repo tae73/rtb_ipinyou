@@ -177,3 +177,74 @@ Source: `stage4_calibration.json` + `redesign_findings.md` §6.
    used to produce Stage B2 / policy-value results. Describe them as implemented; do not call planned.
 5. **Scope limits to keep front-and-center:** won-only surplus is a conservative lower bound (lost
    inventory untestable, P1 NO-GO); the advertiser-cluster CI has only **5 clusters** (low power).
+6. **Architecture (trained model).** The committed fair DR run (`escm2wc_dr_fair_posw`) used
+   **embedding_dim = 16, no FM interaction** (17 categorical + 13 numerical → 16-dim each → trunk
+   **z ∈ ℝ⁴⁸⁰**); towers Win 480→64→32→1, CTR/Imputation 480→128→64→1. (The YAML default `embed_dim=32`
+   was not what was trained; the architecture diagram reflects the trained model.)
+
+---
+
+# Part 2 — Strengthened fair-split experiments (2026-06, all CPU/GPU re-runs on `features_fair`)
+
+The breadth experiments were re-run on the **fair** split so they are canonical (bidding, pacing) or
+honestly exploratory (CATE, SCM), replacing the original/unfair-split versions. Sources are committed
+`results/stage_a/*.json`.
+
+## K. Ablation ladder — fair split (`ablation_ladder.json`)
+ESMM-WC + ESCM²-WC(IPW) retrained on the fair split (2026-06) to close the ladder; neural rungs share
+CTR supervision (ctr_weight=1, pos_weight=50, joint=0.1, embed=16), only the debiasing mechanism varies.
+
+| rung | mechanism | winners-only AUC | winners IEB raw → recal |
+|---|---|---|---|
+| LR (ctr_all) | biased linear | 0.554 | −0.436 → 0.000 |
+| LGB (ctr_all) | biased GBM | 0.632 | 0.476 → 0.000 |
+| ESMM-WC | ESMM joint (implicit) | **0.674** | −37.76 → 0.000 |
+| ESCM²-WC (IPW) | inverse-propensity | 0.656 | −32.46 → 0.000 |
+| ESCM²-WC (DR) | doubly robust (primary) | 0.658 | 0.597 → 0.000 |
+
+- **Honest reading:** all neural variants cluster ~0.656–0.674 (all beat LR 0.554, at/above LGB 0.632);
+  the differences among them are small. ESMM-WC edges raw AUC but at catastrophic raw calibration
+  (IEB −37.8, the direct-BCE+pos_weight over-prediction). **Calibration recalibrates to ≈0 for every
+  rung regardless of raw** (range −38 to +0.6). DR is primary for its decision-value/calibration
+  pipeline, **not** because it maximizes AUC.
+
+## L. Bid-shading strategies — fair split (`bidding_fair.json`)
+Recalibrated neural pCTR, second-price, 5,616,873 winners. Replaces original-split `strategy_comparison_*`.
+
+| strategy | realized 2p surplus (×1e8) |
+|---|---|
+| **truthful (2p-optimal)** | **5.13** |
+| percentile | 5.13 |
+| linear (α=0.8) | 5.07 |
+| exchange_optimal | 4.54 |
+| dual_regime | 3.49 |
+
+- **Linear α-sweep:** surplus rises 3.88e8 → 5.13e8 as α 0.4→1.0; ROI falls 3.40 → 2.42 (win-rate/cost tradeoff).
+
+## M. Budget pacing — fair split (`pacing_fair.json`)
+PID pacing over the 24-hour cycle, truthful 2p. Replaces original-split `pacing_comparison.csv`.
+
+- **WR-weighted hourly allocation beats uniform PID by +11.2% to +13.7%** surplus across budget
+  fractions {0.2, 0.4, 0.6, 0.8} of unconstrained spend; both beat front-loaded "no pacing".
+
+## N. Bid-effect contrast (CATE) — fair split, EXPLORATORY (`cate_fair.json`)
+**Naive within-advertiser difference-in-means** (lowest vs highest logged bid level), canonical
+advertisers; bid-varying carriers {3358, 3427, 3476}. **NOT confounding-adjusted** — a CausalForestDML
+is neither identifiable nor tractable on flat-bid/won-only data (data ceiling). Hypothesis-generating only.
+
+- τ_win **−0.333**, τ_payment(won) **−31.6**, τ_click **−0.0004**, τ_surplus **+21.0** CPM.
+- Surplus decomposition: volume channel (NIE) **−22.7**, cost channel (NDE) **+43.7** (V̄ ≈ 68 CPM).
+- The negative τ_win (more bid → fewer wins) is a confounding artifact (bid level ↔ context), matching
+  the original analysis — illustrates the data ceiling, not a causal claim.
+
+## O. SCM / DAG — fair split, EXPLORATORY (`scm_fair.json`)
+DoWhy backdoor (linear regression) on 19.1M clean rows; **not an identified causal claim** (flat-bid +
+censored lost inventory). Replaces original-split notebook 09b.
+
+| effect | estimate | 95% CI | refutation |
+|---|---|---|---|
+| bid → surplus | **−0.0659** | [−0.0767, −0.0569] | **✓ robust** (random-cause Δ≈0%, placebo ≈0, subset stable) |
+| bid → win | −0.00073 | [−0.00077, −0.00069] | **✓ robust** |
+
+- Both estimates pass all three refutation tests (robustness diagnostics), but remain
+  **hypothesis-generating** given the identification ceiling.

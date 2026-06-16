@@ -1,0 +1,82 @@
+{
+  "_meta": {
+    "split": "features_fair (per-advertiser temporal)",
+    "advertisers_used": [
+      3358,
+      3427,
+      3476
+    ],
+    "estimator": "NAIVE within-advertiser treatment contrast (difference-in-means, lowest vs highest logged bid level) \u2014 NOT confounding-adjusted",
+    "framing": "EXPLORATORY / hypothesis-generating. Flat-bid logging (few discrete levels) + won-only surplus (lost inventory censored) put a credible bid-treatment CATE at the data ceiling; a CausalForestDML is neither identifiable nor tractable here. Signs/magnitudes are suggestive only.",
+    "cpc": 200000.0
+  },
+  "outcomes": {
+    "win": {
+      "ate": -0.33257,
+      "ate_ci": [
+        -0.33257,
+        -0.33257
+      ],
+      "n_advertisers": 3
+    },
+    "payment": {
+      "ate": -31.55026,
+      "ate_ci": [
+        -31.55026,
+        -31.55026
+      ],
+      "n_advertisers": 3
+    },
+    "click": {
+      "ate": -0.00042,
+      "ate_ci": [
+        -0.00042,
+        -0.00042
+      ],
+      "n_advertisers": 3
+    },
+    "surplus": {
+      "ate": 20.96862,
+      "ate_ci": [
+        20.96862,
+        20.96862
+      ],
+      "n_advertisers": 3
+    }
+  },
+  "decomposition": {
+    "V_mean": 68.2,
+    "total_surplus_tau": 20.9686,
+    "NIE_volume": -22.6975,
+    "NDE_cost": 43.6661
+  },
+  "per_advertiser": {
+    "3358": {
+      "bid_low": 227.0,
+      "bid_high": 241.0,
+      "n": 1125304,
+      "tau_win": -0.28983,
+      "tau_click": -0.00047,
+      "tau_surplus": 21.94186,
+      "tau_payment": -37.641
+    },
+    "3427": {
+      "bid_low": 227.0,
+      "bid_high": 241.0,
+      "n": 4209785,
+      "tau_win": -0.32745,
+      "tau_click": -0.00054,
+      "tau_surplus": 19.96737,
+      "tau_payment": -32.762
+    },
+    "3476": {
+      "bid_low": 238.0,
+      "bid_high": 254.0,
+      "n": 2013680,
+      "tau_win": -0.36714,
+      "tau_click": -0.00015,
+      "tau_surplus": 22.51795,
+      "tau_payment": -25.613
+    }
+  }
+}

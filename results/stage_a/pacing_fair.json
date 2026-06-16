@@ -1,0 +1,121 @@
+{
+  "_meta": {
+    "split": "features_fair",
+    "auction": "second_price",
+    "model": "escm2wc_dr recalibrated",
+    "cpc": 200000.0,
+    "unconstrained_spend": 309032983.0,
+    "n_winners": 5616873,
+    "note": "Fair-split budget pacing. Replaces original-split pacing_comparison.csv. Budgets are fractions {0.2,0.4,0.6,0.8} of unconstrained truthful 2p spend."
+  },
+  "by_budget": {
+    "61806597": {
+      "budget_frac": 0.2,
+      "no_pacing": {
+        "utilization": 1.0,
+        "spend": 61805413.0,
+        "surplus": 244103221.19773522,
+        "clicks": 1290,
+        "wins": 1007561,
+        "roi": 4.174
+      },
+      "pid_uniform": {
+        "utilization": 0.9568,
+        "spend": 59135227.0,
+        "surplus": 217916889.95542315,
+        "clicks": 1152,
+        "wins": 938251,
+        "roi": 3.896
+      },
+      "wr_weighted": {
+        "utilization": 1.0,
+        "spend": 61805875.0,
+        "surplus": 244222390.72055933,
+        "clicks": 1284,
+        "wins": 1007638,
+        "roi": 4.155
+      }
+    },
+    "123613193": {
+      "budget_frac": 0.4,
+      "no_pacing": {
+        "utilization": 1.0,
+        "spend": 123612056.0,
+        "surplus": 363556745.91527313,
+        "clicks": 2098,
+        "wins": 1967747,
+        "roi": 3.394
+      },
+      "pid_uniform": {
+        "utilization": 0.8713,
+        "spend": 107704024.0,
+        "surplus": 323080138.69775623,
+        "clicks": 1819,
+        "wins": 1753705,
+        "roi": 3.378
+      },
+      "wr_weighted": {
+        "utilization": 1.0,
+        "spend": 123612490.0,
+        "surplus": 363692926.5810696,
+        "clicks": 2084,
+        "wins": 1968150,
+        "roi": 3.372
+      }
+    },
+    "185419790": {
+      "budget_frac": 0.6,
+      "no_pacing": {
+        "utilization": 1.0,
+        "spend": 185418880.0,
+        "surplus": 447812926.19200575,
+        "clicks": 2748,
+        "wins": 2920956,
+        "roi": 2.964
+      },
+      "pid_uniform": {
+        "utilization": 0.8245,
+        "spend": 152882404.0,
+        "surplus": 394685603.6250435,
+        "clicks": 2318,
+        "wins": 2465347,
+        "roi": 3.032
+      },
+      "wr_weighted": {
+        "utilization": 1.0,
+        "spend": 185418608.0,
+        "surplus": 448648558.391341,
+        "clicks": 2748,
+        "wins": 2933743,
+        "roi": 2.964
+      }
+    },
+    "247226386": {
+      "budget_frac": 0.8,
+      "no_pacing": {
+        "utilization": 1.0,
+        "spend": 247224863.0,
+        "surplus": 497847736.3818982,
+        "clicks": 3306,
+        "wins": 3889935,
+        "roi": 2.674
+      },
+      "pid_uniform": {
+        "utilization": 0.7864,
+        "spend": 194430045.0,
+        "surplus": 448113436.31851953,
+        "clicks": 2771,
+        "wins": 3130738,
+        "roi": 2.85
+      },
+      "wr_weighted": {
+        "utilization": 1.0,
+        "spend": 247225148.0,
+        "surplus": 498255414.9022217,
+        "clicks": 3318,
+        "wins": 3918748,
+        "roi": 2.684
+      }
+    }
+  }
+}

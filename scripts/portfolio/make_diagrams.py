@@ -103,7 +103,7 @@ def funnel(L) -> str:
         (615, 165, 245, 100, NEURAL, L["clicks"], "23K", L["clicks_note"]),
     ]
     for (x, y, w, h, col, name, n, note) in stages:
-        b.append(rect(x, y, w, h, fill=CARD, stroke=col, sw=2.5))
+        b.append(panel(x, y, w, h, fill=CARD, stroke=col, sw=2.5))
         b.append(text(x + w / 2, y + 36, name, 17, col, "bold"))
         b.append(text(x + w / 2, y + 70, n, 26, INK, "bold"))
         b.append(text(x + w / 2, y + 95, note, 11.5, MUTE))
@@ -116,12 +116,12 @@ def funnel(L) -> str:
 
     # censoring callout under the bid->win gate
     cy = 320
-    b.append(rect(60, cy, 500, 86, fill="#FEF2F2", stroke=NEG, sw=1.6))
+    b.append(panel(60, cy, 500, 86, fill="#FEF2F2", stroke=NEG, sw=1.6))
     b.append(text(80, cy + 28, L["censor_h"], 14, NEG, "bold", "start"))
     b.append(lines(80, cy + 50, L["censor_body"], 12.5, MUTE, anchor="start", lh=17))
 
     # the key insight callout (right)
-    b.append(rect(590, cy, 270, 86, fill="#EEF2FF", stroke=NEURAL, sw=1.6))
+    b.append(panel(590, cy, 270, 86, fill="#EEF2FF", stroke=NEURAL, sw=1.6))
     b.append(text(605, cy + 28, L["insight_h"], 13.5, NEURAL, "bold", "start"))
     b.append(lines(605, cy + 49, L["insight_body"], 12, MUTE, anchor="start", lh=16))
     return svg(W, H, "".join(b))
@@ -156,18 +156,18 @@ def architecture(L) -> str:
         b.append(rect(bx + 20 + i * 8, by + 34, 6, 26, fill=PC, stroke="none", sw=0,
                       rx=1, opacity=0.25 + 0.12 * (i % 3)))
     b.append(text(bx + bw / 2 + 16, by + 50, L["embed_l"], 9, INK, anchor="start"))
-    b.append(text(bx + bw / 2, by + 76, "Embed 30×32 = [B, 960]", 9, MUTE))
+    b.append(text(bx + bw / 2, by + 76, "Embed 30×16 = [B, 480]", 9, MUTE))
     b.append(chip(bx + 14, by + 88, bw - 28, 22, L["fm_l"], "#FFFFFF", PC, 8.4, MUTE))
     b.append(text(bx + bw / 2, by + 128, "⊕ concat", 10, PC, "bold"))
     b.append(rect(bx + 36, by + 138, bw - 72, 26, fill="#FFFFFF", stroke=PC, sw=1.4, rx=8))
-    b.append(text(bx + bw / 2, by + 155, "z ∈ ℝ⁹⁹²", 12, INK, "bold"))
+    b.append(text(bx + bw / 2, by + 155, "z ∈ ℝ⁴⁸⁰", 12, INK, "bold"))
 
     # ---------------- C. three towers (horizontal MLP pipelines) ----------------
     b.append(text(620, 96, L["tower_note"], 9.3, MUTE))
     rows = [
-        (160, PW, L["win_name"], L["win_role"], [992, 64, 32, 1], "σ", pw),
-        (250, PC, L["ctr_name"], L["ctr_role"], [992, 128, 64, 1], "σ", pc),
-        (340, PI, L["imp_name"], L["imp_role"], [992, 128, 64, 1], L["lin"], dh),
+        (160, PW, L["win_name"], L["win_role"], [480, 64, 32, 1], "σ", pw),
+        (250, PC, L["ctr_name"], L["ctr_role"], [480, 128, 64, 1], "σ", pc),
+        (340, PI, L["imp_name"], L["imp_role"], [480, 128, 64, 1], L["lin"], dh),
     ]
     zx, zy = bx + bw, by + 90  # trunk z exit point
     for (cy, col, name, role, dims, act, sym) in rows:
@@ -270,7 +270,7 @@ def arc(L) -> str:
     ]
     y, w, h = 90, 176, 150
     for i, (x, col, head, body, struck) in enumerate(nodes):
-        b.append(rect(x, y, w, h, fill=CARD, stroke=col, sw=2.2))
+        b.append(panel(x, y, w, h, fill=CARD, stroke=col, sw=2.2))
         b.append(text(x + w / 2, y + 26, f"{i + 1}", 13, col, "bold"))
         hcol = NEG if struck else col
         b.append(lines(x + w / 2, y + 50, head, 12.5, hcol, "bold", lh=15))
@@ -280,7 +280,7 @@ def arc(L) -> str:
         if i < len(nodes) - 1:
             b.append(arrow(x + w, y + h / 2, x + w + 20, y + h / 2, INK, 2.4))
 
-    b.append(rect(30, 268, 940, 50, fill="#EEF2FF", stroke=NEURAL, sw=1.6))
+    b.append(panel(30, 268, 940, 50, fill="#EEF2FF", stroke=NEURAL, sw=1.6))
     b.append(text(W / 2, 298, L["verdict"], 13.5, NEURAL, "bold"))
     return svg(W, H, "".join(b))
 
@@ -328,7 +328,7 @@ ARCH_EN = dict(
     feat_note=["categorical → Embed(32)", "numeric → Linear(1→32)"],
     trunk_h="Shared representation",
     embed_l="per-feature",
-    fm_l="+ FM  ½((Σe)²−Σe²) = [B,32]",
+    fm_l="17 categorical (embed) + 13 numerical (proj)",
     tower_note="each tower:  Dense → ReLU → Dropout 0.3        σ = sigmoid  ·  lin = identity",
     win_name="Win Tower", win_role="propensity  P(win|x)",
     ctr_name="CTR Tower", ctr_role="debiased  P(click|win,x)",
@@ -354,7 +354,7 @@ ARCH_KO = dict(
     feat_note=["범주형 → Embed(32)", "수치형 → Linear(1→32)"],
     trunk_h="공유 표현(representation)",
     embed_l="피처별",
-    fm_l="+ FM  ½((Σe)²−Σe²) = [B,32]",
+    fm_l="17 categorical (embed) + 13 numerical (proj)",
     tower_note="각 타워:  Dense → ReLU → Dropout 0.3        σ = 시그모이드  ·  lin = 항등",
     win_name="Win 타워", win_role="성향점수  P(win|x)",
     ctr_name="CTR 타워", ctr_role="비편향  P(click|win,x)",

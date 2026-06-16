@@ -1,0 +1,56 @@
+{
+  "_meta": {
+    "split": "features_fair (per-advertiser temporal)",
+    "n_rows": 19118642,
+    "model": "escm2wc_dr (all-bids p_ctr)",
+    "estimator": "DoWhy backdoor.linear_regression",
+    "framing": "EXPLORATORY / hypothesis-generating \u2014 NOT an identified causal claim. Flat-bid logging + won-only (lost inventory censored) make bid\u2192surplus non-identified; refutation tests are robustness diagnostics only."
+  },
+  "bid_to_surplus": {
+    "estimate": {
+      "estimates": "{'backdoor.linear_regression': -0.06587617143595459, 'backdoor.propensity_score_weighting': nan}",
+      "estimate_cis": "{'backdoor.linear_regression': (-0.07670084950350109, -0.05689494483453217), 'backdoor.propensity_score_weighting': None}",
+      "identified_estimand": "Estimand type: EstimandType.NONPARAMETRIC_ATE\n\n### Estimand : 1\nEstimand name: backdoor\nEstimand expression:\n  d                                     \n\u2500\u2500\u2500\u2500\u2500\u2500(E[surplus|campaign,user,context])\nd[bid]                                  \nEstimand assumption 1, Unconfoundedness: If U\u2192{bid} and U\u2192surplus then P(surplus|bid,campaign,user,context,U) = P(surplus|bid,campaign,user,context)\n\n### Estimand : 2\nEstimand name: iv\nNo such variable(s) found!\n\n### Estimand : 3\nEstimand name: frontdoor\nNo such variable(s) found!\n\n### Estimand : 4\nEstimand name: general_adjustment\nEstimand expression:\n  d                                     \n\u2500\u2500\u2500\u2500\u2500\u2500(E[surplus|context,campaign,user])\nd[bid]                                  \nEstimand assumption 1, Unconfoundedness: If U\u2192{bid} and U\u2192surplus then P(surplus|bid,context,campaign,user,U) = P(surplus|bid,context,campaign,user)\n"
+    },
+    "refutation": {
+      "tests": {
+        "random_common_cause": {
+          "new_effect": -0.060553726805201505,
+          "original_effect": -0.06055414432898765,
+          "change_pct": 0.0006895048898282332
+        },
+        "placebo_treatment": {
+          "new_effect": 7.904050999442136e-05
+        },
+        "data_subset": {
+          "new_effect": -0.060151952153253065
+        }
+      },
+      "is_robust": true
+    }
+  },
+  "bid_to_win": {
+    "estimate": {
+      "estimates": "{'backdoor.linear_regression': -0.0007315435142204452, 'backdoor.propensity_score_weighting': nan}",
+      "estimate_cis": "{'backdoor.linear_regression': (-0.0007652962616467862, -0.0006921449259630341), 'backdoor.propensity_score_weighting': None}",
+      "identified_estimand": "Estimand type: EstimandType.NONPARAMETRIC_ATE\n\n### Estimand : 1\nEstimand name: backdoor\nEstimand expression:\n  d                   \n\u2500\u2500\u2500\u2500\u2500\u2500(E[win|context])\nd[bid]                \nEstimand assumption 1, Unconfoundedness: If U\u2192{bid} and U\u2192win then P(win|bid,context,U) = P(win|bid,context)\n\n### Estimand : 2\nEstimand name: iv\nEstimand expression:\n \u23a1                                                 -1\u23a4\n \u23a2        d              \u239b        d               \u239e  \u23a5\nE\u23a2\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500(win)\u22c5\u239c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500([bid])\u239f  \u23a5\n \u23a3d[campaign  user]      \u239dd[campaign  user]       \u23a0  \u23a6\nEstimand assumption 1, As-if-random: If U\u2192\u2192win then \u00ac(U \u2192\u2192{campaign,user})\nEstimand assumption 2, Exclusion: If we remove {campaign,user}\u2192{bid}, then \u00ac({campaign,user}\u2192win)\n\n### Estimand : 3\nEstimand name: frontdoor\nNo such variable(s) found!\n\n### Estimand : 4\nEstimand name: general_adjustment\nEstimand expression:\n  d                   \n\u2500\u2500\u2500\u2500\u2500\u2500(E[win|context])\nd[bid]                \nEstimand assumption 1, Unconfoundedness: If U\u2192{bid} and U\u2192win then P(win|bid,context,U) = P(win|bid,context)\n"
+    },
+    "refutation": {
+      "tests": {
+        "random_common_cause": {
+          "new_effect": -0.0007139492669537428,
+          "original_effect": -0.0007139428959637706,
+          "change_pct": 0.0008923668837176715
+        },
+        "placebo_treatment": {
+          "new_effect": 1.2775463004044418e-07
+        },
+        "data_subset": {
+          "new_effect": -0.000715838896919213
+        }
+      },
+      "is_robust": true
+    }
+  },
+  "dag_dot": "\ndigraph {\n    /* Exogenous (unobserved) */\n    U_market [label=\"U_market\", observed=\"no\"];\n    U_user [label=\"U_user\", observed=\"no\"];\n\n    /* Observed */\n    context [label=\"Context\"];\n    user [label=\"User\"];\n    campaign [label=\"Campaign\"];\n    floor [label=\"Floor Price\"];\n    market_price [label=\"Market Price\"];\n    bid [label=\"Bid Price\"];\n    win [label=\"Win\"];\n    payment [label=\"Payment\"];\n    click [label=\"Click\"];\n    value [label=\"V(x)\"];\n    surplus [label=\"Surplus\"];\n\n    /* Exogenous -> Observed */\n    U_market -> market_price;\n    U_user -> user;\n\n    /* Context -> Market */\n    context -> market_price;\n\n    /* Bidding decision */\n    campaign -> bid;\n    context -> bid;\n    user -> bid;\n\n    /* Auction outcome */\n    bid -> win;\n    market_price -> win;\n    floor -> win;\n    context -> floor;\n\n    /* Two channels to surplus */\n    bid -> payment;\n    win -> payment;\n\n    /* Click & Value */\n    win -> click;\n    user -> click;\n    context -> click;\n\n    click -> value;\n    user -> value;\n    context -> value;\n    campaign -> value;\n\n    /* Surplus composition */\n    value -> surplus;\n    payment -> surplus;\n    win -> surplus;\n}\n"
+}

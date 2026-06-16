@@ -1,0 +1,188 @@
+{
+  "_meta": {
+    "split": "features_fair (per-advertiser temporal)",
+    "auction": "second_price",
+    "model": "escm2wc_dr recalibrated (cross-fit isotonic)",
+    "cpc": 200000.0,
+    "max_bid": 300.0,
+    "n_winners": 5616873,
+    "n_clicks": 4512,
+    "advertisers": [
+      1458,
+      3358,
+      3386,
+      3427,
+      3476
+    ],
+    "note": "Fair-split bid-shading characterization. Replaces the original/unfair-split results/bidding/{strategy_comparison_*,alpha_sensitivity}.csv (advertisers 2259/2261/2821/2997). Decision-value gap vs baselines is in stage_b2_surplus.json."
+  },
+  "strategy_comparison": {
+    "truthful": {
+      "strategy": "truthful",
+      "n_wins": 4713692,
+      "win_rate": 0.8392,
+      "total_surplus": 513120391.06699556,
+      "avg_cpm": 65.56,
+      "avg_cpc": 82540.9,
+      "roi": 2.423,
+      "overpayment_ratio": 2.973,
+      "mean_bid": 148.89
+    },
+    "exchange_optimal": {
+      "strategy": "exchange_optimal",
+      "n_wins": 3363050,
+      "win_rate": 0.5987,
+      "total_surplus": 454481752.8384325,
+      "avg_cpm": 53.13,
+      "avg_cpc": 67474.8,
+      "roi": 2.964,
+      "overpayment_ratio": 1.279,
+      "mean_bid": 67.91
+    },
+    "dual_regime": {
+      "strategy": "dual_regime",
+      "n_wins": 2770187,
+      "win_rate": 0.4932,
+      "total_surplus": 348683918.3935536,
+      "avg_cpm": 51.01,
+      "avg_cpc": 69341.9,
+      "roi": 2.884,
+      "overpayment_ratio": 1.381,
+      "mean_bid": 65.79
+    },
+    "linear": {
+      "strategy": "linear",
+      "n_wins": 4315356,
+      "win_rate": 0.7683,
+      "total_surplus": 507468755.2973302,
+      "avg_cpm": 60.86,
+      "avg_cpc": 77335.6,
+      "roi": 2.586,
+      "overpayment_ratio": 2.406,
+      "mean_bid": 120.2
+    },
+    "percentile": {
+      "strategy": "percentile",
+      "n_wins": 4713692,
+      "win_rate": 0.8392,
+      "total_surplus": 513120391.06699556,
+      "avg_cpm": 65.56,
+      "avg_cpc": 82540.9,
+      "roi": 2.423,
+      "overpayment_ratio": 2.973,
+      "mean_bid": 148.89
+    }
+  },
+  "best_strategy": "truthful",
+  "alpha_sensitivity": [
+    {
+      "alpha": 0.4,
+      "n_wins": 2438568,
+      "win_rate": 0.4342,
+      "total_surplus": 388136596.44481283,
+      "avg_cpm": 48.91,
+      "avg_cpc": 58780.7,
+      "roi": 3.402,
+      "overpayment_ratio": 1.482,
+      "mean_bid": 61.88
+    },
+    {
+      "alpha": 0.5,
+      "n_wins": 3205943,
+      "win_rate": 0.5708,
+      "total_surplus": 455178143.55624306,
+      "avg_cpm": 53.38,
+      "avg_cpc": 66480.5,
+      "roi": 3.008,
+      "overpayment_ratio": 1.622,
+      "mean_bid": 76.67
+    },
+    {
+      "alpha": 0.6,
+      "n_wins": 3639648,
+      "win_rate": 0.648,
+      "total_surplus": 481501657.594469,
+      "avg_cpm": 55.9,
+      "avg_cpc": 69937.9,
+      "roi": 2.86,
+      "overpayment_ratio": 1.89,
+      "mean_bid": 91.36
+    },
+    {
+      "alpha": 0.7,
+      "n_wins": 3961692,
+      "win_rate": 0.7053,
+      "total_surplus": 497147099.3350701,
+      "avg_cpm": 58.54,
+      "avg_cpc": 73235.5,
+      "roi": 2.731,
+      "overpayment_ratio": 2.173,
+      "mean_bid": 105.8
+    },
+    {
+      "alpha": 0.8,
+      "n_wins": 4315356,
+      "win_rate": 0.7683,
+      "total_surplus": 507468755.2973302,
+      "avg_cpm": 60.86,
+      "avg_cpc": 77335.6,
+      "roi": 2.586,
+      "overpayment_ratio": 2.406,
+      "mean_bid": 120.2
+    },
+    {
+      "alpha": 0.9,
+      "n_wins": 4535708,
+      "win_rate": 0.8075,
+      "total_surplus": 511934837.63677573,
+      "avg_cpm": 63.38,
+      "avg_cpc": 80749.3,
+      "roi": 2.477,
+      "overpayment_ratio": 2.687,
+      "mean_bid": 134.55
+    },
+    {
+      "alpha": 1.0,
+      "n_wins": 4713692,
+      "win_rate": 0.8392,
+      "total_surplus": 513120391.06699556,
+      "avg_cpm": 65.56,
+      "avg_cpc": 82540.9,
+      "roi": 2.423,
+      "overpayment_ratio": 2.973,
+      "mean_bid": 148.89
+    }
+  ],
+  "per_advertiser_best": {
+    "1458": {
+      "n_winners": 1356863,
+      "surplus": 147632599.0013474,
+      "win_rate": 0.9453,
+      "clicks": 1172
+    },
+    "3358": {
+      "n_winners": 444568,
+      "surplus": 32783485.029348213,
+      "win_rate": 0.7546,
+      "clicks": 412
+    },
+    "3386": {
+      "n_winners": 1135250,
+      "surplus": 89979621.28363945,
+      "win_rate": 0.8119,
+      "clicks": 1012
+    },
+    "3427": {
+      "n_winners": 1836140,
+      "surplus": 175030948.7981572,
+      "win_rate": 0.8,
+      "clicks": 1410
+    },
+    "3476": {
+      "n_winners": 844052,
+      "surplus": 67693736.95450321,
+      "win_rate": 0.8353,
+      "clicks": 506
+    }
+  }
+}

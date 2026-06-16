@@ -380,15 +380,243 @@ def fig_artifact_vs_fair() -> None:
     _save(fig, "fig_artifact_vs_fair.png")
 
 
+_LADDER_COLORS = ["#6B7280", "#0D9488", "#A5B4FC", "#818CF8", "#4F46E5"]
+
+
+def fig_ablation_ladder() -> None:
+    d = _load("ablation_ladder.json")["ladder"]
+    labels = [r["label"].replace(" (", "\n(") for r in d]
+    auc = [r["winners_auc"] for r in d]
+    ieb_raw = [max(abs(r["winners_ieb_raw"]), 1e-3) for r in d]
+    ieb_rec = [max(abs(r["winners_ieb_recal"]), 1e-3) for r in d]
+    cols = _LADDER_COLORS[: len(d)]
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5.4))
+    ax = axes[0]
+    ax.bar(range(len(d)), auc, color=cols, edgecolor="white", width=0.66, zorder=3)
+    ax.axhline(0.5, ls="--", color=C.ink, lw=1)
+    for i, v in enumerate(auc):
+        ax.text(i, v + 0.003, f"{v:.3f}", ha="center", va="bottom", fontsize=10.5, fontweight="bold")
+    ax.set_xticks(range(len(d)))
+    ax.set_xticklabels(labels, fontsize=8.4)
+    ax.set_ylim(0.5, max(auc) + 0.03)
+    ax.set_ylabel("winners-only AUC  (0.5 = chance)")
+    ax.set_title("Ranking along the ladder\n(winners-only AUC = the bidding object)",
+                 fontsize=11, fontweight="bold")
+    ax = axes[1]
+    x = range(len(d))
+    w = 0.38
+    ax.bar([i - w / 2 for i in x], ieb_raw, w, color=C.neg, label="raw", zorder=3)
+    ax.bar([i + w / 2 for i in x], ieb_rec, w, color=C.pos, label="+ cross-fit isotonic", zorder=3)
+    ax.set_yscale("log")
+    ax.set_xticks(list(x))
+    ax.set_xticklabels(labels, fontsize=8.4)
+    ax.set_ylabel("|winners IEB|  (log)")
+    ax.legend(fontsize=9)
+    ax.set_title("Calibration fixed post-hoc for every rung\n(raw IEB varies wildly → recal ≈ 0)",
+                 fontsize=11, fontweight="bold")
+    fig.suptitle("Ablation ladder (fair split): LR → LGB → ESMM-WC → ESCM²-WC(IPW) → ESCM²-WC(DR)",
+                 fontsize=13, fontweight="bold", y=1.02)
+    _save(fig, "fig_ablation_ladder.png")
+
+
+def fig_bidding_strategies() -> None:
+    d = _load("bidding_fair.json")
+    strat, alpha, best = d["strategy_comparison"], d["alpha_sensitivity"], d["best_strategy"]
+    B = 1e8
+    names = list(strat)
+    sur = [strat[s]["total_surplus"] / B for s in names]
+    cols = [C.pos if s == best else C.lgb for s in names]
+    fig, axes = plt.subplots(1, 2, figsize=(12.5, 5.2))
+    ax = axes[0]
+    ax.bar(names, sur, color=cols, edgecolor="white", zorder=3)
+    for i, v in enumerate(sur):
+        ax.text(i, v + 0.03, f"{v:.2f}", ha="center", fontsize=9.5, fontweight="bold")
+    ax.set_ylabel("realized 2nd-price surplus (×1e8)")
+    ax.tick_params(axis="x", labelrotation=18)
+    ax.set_title(f"Strategy comparison — best: {best}", fontsize=11, fontweight="bold")
+    ax = axes[1]
+    a = [x["alpha"] for x in alpha]
+    sa = [x["total_surplus"] / B for x in alpha]
+    roi = [x["roi"] for x in alpha]
+    ax.plot(a, sa, "o-", color=C.neural, lw=2)
+    ax.set_xlabel("linear shading α  (bid = α·V)")
+    ax.set_ylabel("surplus (×1e8)", color=C.neural)
+    ax2 = ax.twinx()
+    ax2.plot(a, roi, "s--", color=C.lgb, lw=2)
+    ax2.set_ylabel("ROI", color=C.lgb)
+    ax2.grid(False)
+    ax.set_title("Shading α: surplus ↑, ROI ↓ (win-rate / cost tradeoff)", fontsize=11, fontweight="bold")
+    fig.suptitle("Bid-shading on the fair split (recalibrated neural pCTR, 2nd-price)",
+                 fontsize=12.5, fontweight="bold", y=1.0)
+    _save(fig, "fig_bidding_strategies.png")
+
+
+def fig_pacing() -> None:
+    d = _load("pacing_fair.json")["by_budget"]
+    B = 1e8
+    keys = sorted(d, key=lambda k: float(k))
+    fr = [d[k]["budget_frac"] for k in keys]
+    nop = [d[k]["no_pacing"]["surplus"] / B for k in keys]
+    uni = [d[k]["pid_uniform"]["surplus"] / B for k in keys]
+    wr = [d[k]["wr_weighted"]["surplus"] / B for k in keys]
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    ax = axes[0]
+    ax.plot(fr, nop, "o-", color=C.ns, lw=2, label="no pacing")
+    ax.plot(fr, uni, "s-", color=C.lr, lw=2, label="PID uniform")
+    ax.plot(fr, wr, "^-", color=C.pos, lw=2, label="WR-weighted PID")
+    ax.set_xlabel("daily budget (fraction of unconstrained spend)")
+    ax.set_ylabel("surplus (×1e8)")
+    ax.legend(fontsize=9)
+    ax.set_title("Surplus vs budget", fontsize=11, fontweight="bold")
+    ax = axes[1]
+    lift = [(d[k]["wr_weighted"]["surplus"] / d[k]["pid_uniform"]["surplus"] - 1) * 100 for k in keys]
+    ax.bar([f"{f:.1f}" for f in fr], lift, color=C.pos, edgecolor="white", zorder=3)
+    for i, v in enumerate(lift):
+        ax.text(i, v + 0.15, f"+{v:.1f}%", ha="center", fontsize=9.5, fontweight="bold")
+    ax.set_xlabel("budget fraction")
+    ax.set_ylabel("WR-weighted surplus lift over uniform (%)")
+    ax.set_title("Smart hourly allocation lifts surplus", fontsize=11, fontweight="bold")
+    fig.suptitle("Budget pacing on the fair split (truthful 2nd-price)", fontsize=12.5, fontweight="bold", y=1.0)
+    _save(fig, "fig_pacing.png")
+
+
+def fig_market_cdf() -> None:
+    import numpy as np
+    s = json.load(open(ROOT / "results/market_price_cdf/summary.json"))
+    km = np.load(ROOT / "results/market_price_cdf/km_cdf_overall.npz")
+    ks = km.files
+    grid = km["price_grid"] if "price_grid" in ks else km[ks[0]]
+    if "cdf" in ks:
+        cdf = km["cdf"]
+    elif "survival" in ks:
+        cdf = 1 - km["survival"]
+    else:
+        cdf = km[ks[1]]
+    st = s["market_price_stats"]
+    fig, axes = plt.subplots(1, 2, figsize=(12.5, 5))
+    ax = axes[0]
+    ax.plot(grid, cdf, color=C.neural, lw=2.2)
+    ax.axvline(st["median"], ls="--", color=C.lgb, lw=1.2)
+    ax.text(st["median"] + 5, 0.12, f"median {st['median']:.0f}", color=C.lgb, fontsize=9)
+    ax.set_xlim(0, 320)
+    ax.set_xlabel("market price (CPM)")
+    ax.set_ylabel("win prob  F(b) = P(market ≤ b)")
+    ax.set_title(f"Kaplan-Meier market-price CDF\nmean {st['mean']:.0f} · median {st['median']:.0f} · "
+                 f"floor-binding {st['floor_binding_rate']*100:.0f}%", fontsize=10.5, fontweight="bold")
+    ax = axes[1]
+    exf = s["exchange_f300"]
+    exs = sorted(exf)
+    vals = [exf[e] for e in exs]
+    ax.bar([f"exch {e}" for e in exs], vals, color=[C.lgb, C.neural, C.lr][: len(exs)],
+           edgecolor="white", zorder=3)
+    for i, v in enumerate(vals):
+        ax.text(i, v + 0.01, f"{v:.2f}", ha="center", fontsize=10, fontweight="bold")
+    ax.set_ylabel("F(300) = win prob at max bid")
+    ax.set_ylim(0, 0.8)
+    ax.set_title(f"Exchange competition differs sharply\n(temporal drift KS={s['temporal_ks']:.3f}, "
+                 f"best fit {s['best_parametric']})", fontsize=10.5, fontweight="bold")
+    fig.suptitle("Right-censored market-price modeling (first-price win curve)",
+                 fontsize=12.5, fontweight="bold", y=1.0)
+    _save(fig, "fig_market_cdf.png")
+
+
+def fig_cate() -> None:
+    d = _load("cate_fair.json")
+    o = d["outcomes"]
+    dec = d["decomposition"]
+    fig, axes = plt.subplots(1, 2, figsize=(12.5, 5.2))
+    # Panel A: surplus decomposition (volume NIE vs cost NDE -> total)
+    ax = axes[0]
+    labs = ["volume\n(NIE)", "cost\n(NDE)", "total\nτ_surplus"]
+    vals = [dec["NIE_volume"], dec["NDE_cost"], dec["total_surplus_tau"]]
+    cols = [C.neg if v < 0 else C.pos for v in vals[:2]] + [C.neural]
+    ax.bar(labs, vals, color=cols, edgecolor="white", zorder=3)
+    ax.axhline(0, color=C.ink, lw=1)
+    for i, v in enumerate(vals):
+        ax.text(i, v + (1.5 if v >= 0 else -1.5), f"{v:+.1f}", ha="center",
+                va="bottom" if v >= 0 else "top", fontsize=10.5, fontweight="bold")
+    ax.set_ylabel("Δ surplus per higher bid level (CPM)")
+    ax.set_title("Surplus contrast decomposes into\nnegative volume + positive cost channel",
+                 fontsize=10.5, fontweight="bold")
+    # Panel B: per-advertiser τ_surplus heterogeneity
+    ax = axes[1]
+    pa = d.get("per_advertiser", {})
+    advs = sorted(pa, key=lambda a: pa[a]["tau_surplus"])
+    ts = [pa[a]["tau_surplus"] for a in advs]
+    ax.barh([f"adv {a}" for a in advs], ts, color=[C.neg if v < 0 else C.pos for v in ts],
+            edgecolor="white", zorder=3)
+    ax.axvline(0, color=C.ink, lw=1)
+    for i, v in enumerate(ts):
+        ax.text(v, i, f" {v:+.1f}", va="center", ha="left" if v >= 0 else "right", fontsize=9.5)
+    ax.set_xlabel("τ_surplus per advertiser (CPM)")
+    ax.set_title("Heterogeneous across advertisers\n(bid-varying advertisers only)",
+                 fontsize=10.5, fontweight="bold")
+    other = "  ".join(f"τ_{n}={o[n]['ate']:.3g}" for n in ("win", "payment", "click") if n in o)
+    fig.suptitle("Bid-effect contrast — fair split  ·  EXPLORATORY naive difference-in-means "
+                 "(confounded; won-only / flat-bid ceiling)\n" + other,
+                 fontsize=10.5, fontweight="bold", y=1.04)
+    _save(fig, "fig_cate.png")
+
+
+def fig_scm() -> None:
+    import ast
+    d = _load("scm_fair.json")
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    ax = axes[0]
+    rows = []
+    for o in ["bid_to_surplus", "bid_to_win"]:
+        est = d[o]["estimate"]["estimates"]
+        ci = d[o]["estimate"]["estimate_cis"]
+        if isinstance(est, str):
+            est = ast.literal_eval(est.replace("nan", "None"))
+        if isinstance(ci, str):
+            ci = ast.literal_eval(ci.replace("nan", "None"))
+        v = est.get("backdoor.linear_regression")
+        c = ci.get("backdoor.linear_regression")
+        rows.append((o.replace("bid_to_", "bid → "), v, c))
+    for i, (lab, v, c) in enumerate(rows):
+        col = C.neg if v < 0 else C.pos
+        if c:
+            ax.plot([c[0], c[1]], [i, i], color=col, lw=3)
+        ax.scatter([v], [i], color=col, s=90, zorder=3)
+        ax.text(v, i + 0.16, f"{v:.4f}", ha="center", fontsize=10, color=col, fontweight="bold")
+    ax.axvline(0, color=C.ink, lw=1)
+    ax.set_yticks(range(len(rows)))
+    ax.set_yticklabels([r[0] for r in rows], fontsize=11)
+    ax.set_ylim(-0.5, len(rows) - 0.3)
+    ax.set_xlabel("DoWhy backdoor estimate (linear regression)")
+    ax.set_title("Causal effect of bid", fontsize=11, fontweight="bold")
+    ax = axes[1]
+    ax.axis("off")
+    lines = ["Refutation tests (robustness diagnostics)", ""]
+    for o in ["bid_to_surplus", "bid_to_win"]:
+        r = d[o]["refutation"]
+        rob = r.get("is_robust")
+        lines.append(f"{o.replace('bid_to_', 'bid→')}:  {'✓ robust' if rob else '✗'}")
+        for t, vals in r["tests"].items():
+            lines.append(f"   • {t}: {vals.get('new_effect'):.2e}")
+        lines.append("")
+    ax.text(0.02, 0.96, "\n".join(lines), va="top", ha="left", fontsize=10, family="monospace")
+    fig.suptitle("SCM / DAG — bid → {surplus, win} (fair split)  ·  EXPLORATORY (not identified)",
+                 fontsize=11.5, fontweight="bold", y=1.0)
+    _save(fig, "fig_scm.png")
+
+
 def main() -> None:
     _style()
     print(f"Generating portfolio figures -> {OUT.relative_to(ROOT)}/")
-    fig_surplus_forest()
-    fig_calibration_journey()
-    fig_ablation_auc()
-    fig_surplus_grid()
-    fig_policy_value_decomp()
-    fig_artifact_vs_fair()
+    figs = [
+        fig_surplus_forest, fig_calibration_journey, fig_ablation_auc, fig_surplus_grid,
+        fig_policy_value_decomp, fig_artifact_vs_fair,
+        fig_ablation_ladder, fig_bidding_strategies, fig_pacing, fig_market_cdf, fig_cate, fig_scm,
+    ]
+    for f in figs:
+        try:
+            f()
+        except FileNotFoundError as e:
+            print(f"  SKIP {f.__name__}: missing {e.filename}")
+        except Exception as e:  # noqa: BLE001 — keep generating the rest
+            print(f"  ERROR {f.__name__}: {type(e).__name__}: {e}")
     print("done.")
 
 
