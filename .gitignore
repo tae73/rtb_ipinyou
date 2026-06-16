@@ -26,6 +26,7 @@ Thumbs.db
 # Data (large files)
 data/
 results/models/
+old/results/models/
 *.parquet
 *.npz
 *.bz2

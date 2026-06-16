@@ -1,0 +1,151 @@
+{
+  "_meta": {
+    "dgp": "semi-synthetic; market price lognormal calibrated to iPinYou median 68",
+    "N": 120000,
+    "CPC": 3000.0,
+    "metric": "full-inventory decision-value regret (lower=better)",
+    "debiaser": "GBM + IPW (winners-only, win-propensity weighted)",
+    "axes": "baseline capacity {linear\u2248LR, gbm\u2248LGB} \u00d7 selection strength \u03b3 \u00d7 heterogeneity \u03b8",
+    "anchor": "iPinYou fair split: debiasing robust vs LR, NOT robust vs LGB (I\u00b2=0.82)"
+  },
+  "cells": [
+    {
+      "gamma": 0.4,
+      "theta": 0,
+      "baseline": "linear",
+      "win_rate": 0.5,
+      "regret_baseline": 0.1993,
+      "regret_baseline_recal": 0.1968,
+      "regret_debiaser": 0.0358,
+      "edge_vs_baseline_pp": 16.35,
+      "edge_vs_recal_pp": 16.1
+    },
+    {
+      "gamma": 0.4,
+      "theta": 60,
+      "baseline": "linear",
+      "win_rate": 0.5,
+      "regret_baseline": 0.2077,
+      "regret_baseline_recal": 0.1989,
+      "regret_debiaser": 0.0269,
+      "edge_vs_baseline_pp": 18.08,
+      "edge_vs_recal_pp": 17.2
+    },
+    {
+      "gamma": 0.8,
+      "theta": 0,
+      "baseline": "linear",
+      "win_rate": 0.5,
+      "regret_baseline": 0.3593,
+      "regret_baseline_recal": 0.3642,
+      "regret_debiaser": 0.084,
+      "edge_vs_baseline_pp": 27.53,
+      "edge_vs_recal_pp": 28.02
+    },
+    {
+      "gamma": 0.8,
+      "theta": 60,
+      "baseline": "linear",
+      "win_rate": 0.5,
+      "regret_baseline": 0.2501,
+      "regret_baseline_recal": 0.2445,
+      "regret_debiaser": 0.0612,
+      "edge_vs_baseline_pp": 18.9,
+      "edge_vs_recal_pp": 18.33
+    },
+    {
+      "gamma": 1.2,
+      "theta": 0,
+      "baseline": "linear",
+      "win_rate": 0.5,
+      "regret_baseline": 0.588,
+      "regret_baseline_recal": 0.6855,
+      "regret_debiaser": 0.1386,
+      "edge_vs_baseline_pp": 44.94,
+      "edge_vs_recal_pp": 54.69
+    },
+    {
+      "gamma": 1.2,
+      "theta": 60,
+      "baseline": "linear",
+      "win_rate": 0.5,
+      "regret_baseline": 0.2618,
+      "regret_baseline_recal": 0.2592,
+      "regret_debiaser": 0.0676,
+      "edge_vs_baseline_pp": 19.42,
+      "edge_vs_recal_pp": 19.16
+    },
+    {
+      "gamma": 0.4,
+      "theta": 0,
+      "baseline": "gbm",
+      "win_rate": 0.5,
+      "regret_baseline": 0.0306,
+      "regret_baseline_recal": 0.0508,
+      "regret_debiaser": 0.0358,
+      "edge_vs_baseline_pp": -0.52,
+      "edge_vs_recal_pp": 1.5
+    },
+    {
+      "gamma": 0.4,
+      "theta": 60,
+      "baseline": "gbm",
+      "win_rate": 0.5,
+      "regret_baseline": 0.024,
+      "regret_baseline_recal": 0.0393,
+      "regret_debiaser": 0.0269,
+      "edge_vs_baseline_pp": -0.29,
+      "edge_vs_recal_pp": 1.24
+    },
+    {
+      "gamma": 0.8,
+      "theta": 0,
+      "baseline": "gbm",
+      "win_rate": 0.5,
+      "regret_baseline": 0.0633,
+      "regret_baseline_recal": 0.0827,
+      "regret_debiaser": 0.084,
+      "edge_vs_baseline_pp": -2.07,
+      "edge_vs_recal_pp": -0.13
+    },
+    {
+      "gamma": 0.8,
+      "theta": 60,
+      "baseline": "gbm",
+      "win_rate": 0.5,
+      "regret_baseline": 0.04,
+      "regret_baseline_recal": 0.0531,
+      "regret_debiaser": 0.0612,
+      "edge_vs_baseline_pp": -2.12,
+      "edge_vs_recal_pp": -0.81
+    },
+    {
+      "gamma": 1.2,
+      "theta": 0,
+      "baseline": "gbm",
+      "win_rate": 0.5,
+      "regret_baseline": 0.093,
+      "regret_baseline_recal": 0.1125,
+      "regret_debiaser": 0.1386,
+      "edge_vs_baseline_pp": -4.56,
+      "edge_vs_recal_pp": -2.61
+    },
+    {
+      "gamma": 1.2,
+      "theta": 60,
+      "baseline": "gbm",
+      "win_rate": 0.5,
+      "regret_baseline": 0.0474,
+      "regret_baseline_recal": 0.0623,
+      "regret_debiaser": 0.0676,
+      "edge_vs_baseline_pp": -2.02,
+      "edge_vs_recal_pp": -0.53
+    }
+  ],
+  "summary": {
+    "mean_edge_vs_linear_pp": 24.2,
+    "mean_edge_vs_gbm_pp": -1.93,
+    "mean_edge_vs_recal_pp": 12.68,
+    "asymmetry_holds": true
+  }
+}

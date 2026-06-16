@@ -1,309 +1,163 @@
-# 실시간 입찰(RTB)에서의 Win Selection Bias 디바이어싱
+# 디바이어싱은 *언제* 입찰을 바꾸는가?
 
 [🇺🇸 English](README.md) · 🇰🇷 **한국어**
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
-![JAX](https://img.shields.io/badge/JAX%2FFlax-neural%20towers-EE4C2C)
-![LightGBM](https://img.shields.io/badge/LightGBM-baselines-02A4D3)
-![EconML](https://img.shields.io/badge/EconML%2FDoWhy-causal-7B42BC)
-![Data](https://img.shields.io/badge/Data-iPinYou%20RTB%202013-005571)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-baselines-F7931E?logo=scikitlearn&logoColor=white)
+![LightGBM](https://img.shields.io/badge/LightGBM-strong%20competitor-02A4D3)
+![Method](https://img.shields.io/badge/contribution-characterization%2C%20not%20a%20method-7B42BC)
+![Status](https://img.shields.io/badge/status-sketch%C2%B7synthetic--verified-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-> 경매로 인해 검열(censored)된 데이터에서 doubly-robust 3-tower 모델(`ESCM²-WC`)로 unbiased
-> click-through rate를 복원하고, 그것이 정말로 더 나은 입찰로 이어지는지를 **정직하게** 측정한 프로젝트.
-> 핵심 메시지는 **methodological rigor + falsification**이다. 모든 주장은 committed artifact에 못 박혀
-> 있고, 첫 결과는 artifact로 판명되어 철회되었으며, 최종 verdict는 *선형 모델 대비 robust, 강한 GBM 대비
-> not robust*로 보고된다.
+> **Decision-layer 질문.** RTB의 win-selection-bias 디바이어싱은 이미 *풀린 방법*이다
+> (ESMM/ESCM², win-tower-as-propensity). 열린 질문은 **그게 *언제* 입찰을 실제로 바꾸는가** — AUC가 아니라
+> 의사결정 가치로 — **그리고 편향 모델을 단순 recalibration하면 왜 full inventory에서 역효과인가**이다.
+> 통제 가능한 **semi-synthetic testbed**(ground-truth pCTR + *관측 가능한* lost inventory, 실 iPinYou 시장
+> 통계로 calibration)로 **regime phase diagram**을 그린다. wedge는 **competitor-model-strength** 축이고,
+> 실제 iPinYou 결과가 그 *음성 절반*이다.
 
 <p align="center">
-  <img src="results/figures/portfolio/fig_surplus_forest.png" alt="광고주별 surplus forest: 디바이어싱은 선형 baseline 대비 robust, 강한 GBM 대비 not robust" width="900">
+  <img src="witnesses/figures/fig_phase_diagram.png" alt="Phase diagram: 약한 linear 경쟁자 대비 디바이어싱 edge는 커지지만 강한 GBM 대비 사라진다 — iPinYou anchor가 음성 절반에 위치" width="900">
 </p>
 
 ---
 
-### 🧭 시간으로 둘러보기
+### 🧭 시간으로 탐색
 
 | ⏱️ 30초 | 🔎 5분 | 🧪 30분 | ♻️ 재현 |
 |---|---|---|---|
-| [TL;DR](#-tldr-30초) · [핵심 결과 요약](#-핵심-결과-요약) | [문제](#문제--win-selection-bias) · [방법](#접근--escmwc) · [철회](#정직한-연구-아크) · [결과](#결과-5분) | [핵심 인사이트](#-핵심-인사이트) · [한계와 교훈](#-한계와-교훈) · [부록](#-부록) · [`technical_report.md`](docs/technical_report.md) | [빠른 시작](#빠른-시작--figure-재현) · [저장소 맵](#저장소-맵) · [`NUMBERS_LEDGER.md`](docs/NUMBERS_LEDGER.md) |
+| [TL;DR](#-tldr-30초) · [주장 한눈에](#-주장-한눈에) | [질문](#질문--decision-layer) · [C1 phase diagram](#c1--경쟁자-강도가-payoff를-지배) · [C2 recalibration trap](#c2--recalibration-trap) | [`methods.md`](methods.md) · [`review.md`](review.md) · [정직한 scope](#-정직한-scope) | [`MANIFEST.md`](MANIFEST.md) · [`repro/`](repro/) · [Foundation → `old/`](#foundation--ipinyou-연구-old) |
 
 ---
 
 ## ⏱️ TL;DR (30초)
 
-실시간 입찰에서 bidder는 자신의 bid가 경매에서 **이겼을(won)** 때에만 click을 관측할 수 있다. winner만으로
-click 모델을 학습하면 **selection-biased**되고, 편향된 pCTR은 곧 편향된 bid를 의미한다. 이 프로젝트는
-unbiased pCTR을 복원하기 위해 **doubly-robust 디바이어싱 모델**(`ESCM²-WC`)을 만들고, 유일하게 중요한 질문을
-던진다. **그것이 더 나은 입찰 의사결정을 만들어 내는가?**
+bidder는 *이긴* 입찰에서만 click을 본다. winners로만 pCTR을 학습 → selection bias → 편향된 입찰.
+디바이어싱은 *모델*을 고친다 — 그러나 광고주에게 중요한 질문은 **그게 입찰 의사결정을 바꾸는가, 그리고
+언제인가**이다. iPinYou 실데이터는 이 질문에 답할 수 없다(flat-bid 로깅이 lost inventory를 검열). 그래서
+lost inventory가 **관측 가능한** testbed를 만들어 regime을 sweep한다.
 
-- **Ranking — 그렇다.** *공정한(fair)* split에서 디바이어싱은 입찰이 쓰는 대상을 이긴다(winners-only AUC
-  **0.658 > LGB 0.632 > LR 0.554**). 전체 ablation 사다리(LR → LGB → ESMM-WC → IPW → DR)가 하나의 split
-  위에서 닫혔다.
-- **Calibration — 완전히 해결.** Cross-fit isotonic이 global bias를 0으로 만들고(IEB **0.597 → 0**),
-  광고주별 map이 잔차를 닫는다(**0.226 → 0.0006**). 둘 다 rank-preserving이다.
-- **Bidding value — verdict가 갈린다.** Realized-surplus 이득은 **선형 LR 대비 robust**(광고주 5/5, CI가
-  0 제외)이지만 **강한 GBM 대비 NOT robust**다. 그 우위는 광고주별로 이질적이며(**Cochran's Q I²=0.82**),
-  5개 중 1개 광고주에서만 유의하고, 그 하나를 빼면 음수로 뒤집힌다.
+- **C1 — 경쟁자 강도가 payoff를 지배.** 디바이어싱의 입찰 edge는 *약한 linear* 경쟁자 대비 의사결정 regret
+  **+24.2 pp**(selection이 강할수록 증가)이지만 *강한 GBM* 대비 **−1.9 pp** — 강한 baseline은 **못 이긴다.**
+  이는 실제 iPinYou 결과(디바이어싱 robust vs LR, **NOT** vs LGB, I²=0.82)를 **재현·설명**한다: 그 결과가
+  이 diagram의 *음성 절반*이다.
+- **C2 — Recalibration trap.** 편향 모델을 그냥 recalibration하면 **입찰가가 부풀고**(137.8 → 193.5),
+  *unprofitable* inventory를 더 따내(share 0.495 → 0.509) surplus가 **하락**(4.3M → 3.3M)한다. 원칙적인 DR
+  디바이어싱은 레벨 인플레 없이 *shape*를 고쳐 **8.6M ≈ oracle의 88%**를 회복한다.
 
-> **이 프로젝트의 서사는 정직함이다.** 첫 헤드라인("neural 디바이어싱이 AUC에서 baseline을 이긴다")은
-> **split artifact로 철회**되었다 — 우리 자신의 root-cause audit으로 잡아냈다 — 그리고 calibration과
-> bidding surplus를 중심으로 다시 짜였다. 모든 숫자는 [`docs/NUMBERS_LEDGER.md`](docs/NUMBERS_LEDGER.md)에
-> 살아 있다.
+> **기여는 새 방법이 아니라 characterization** — *real but thin* — 이라서, 디바이어싱이 **도움이 안 되는**
+> 영역을 명시하는 것이 본질이다. 모든 수치는 committed witness JSON에 고정([`MANIFEST.md`](MANIFEST.md)),
+> [`repro/`](repro/) harness가 재확인한다.
 
-## 🎯 핵심 결과 요약
+## 🎯 주장 한눈에
 
-| # | 결과 | 값 | Split | 상태 |
+| # | 주장 | 헤드라인 | Witness | 상태 |
 |---|---|---|---|---|
-| 1 | Winners-only AUC (neural / LGB / LR) | **0.658** / 0.632 / 0.554 | fair | canonical |
-| 2 | Global calibration (neural winners IEB) | 0.597 → **0.000** | fair | canonical |
-| 3 | 광고주별 잔차 IEB | 0.226 → **0.0006** | fair | canonical |
-| 4 | **LR** 대비 decision value (truthful 2p) | **+27.4M**, CI [17.7M, 37.8M] ✓ | fair | **robust** |
-| 5 | **LGB** 대비 decision value (truthful 2p) | +9.4M, CI [−11.1M, 40.7M] ✗ | fair | **not robust** (I²=0.82) |
-| 6 | Full-inventory value V(π), neural | **4.39e8**, ≥99.26% exact | fair | canonical |
-| 7 | 최적 bid-shading 전략 | truthful, surplus **5.13e8** | fair | canonical |
-| 8 | Budget pacing (WR-weighted vs uniform) | **+11–14%** surplus | fair | canonical |
-| 9 | CATE bid-effect / SCM bid→surplus | τ_surplus +21 / −0.066 (robust refutation) | fair | **exploratory** |
+| C1 | 디바이어싱 edge는 경쟁자 강도에 의존 | **+24.2 pp** vs linear · **−1.9 pp** vs GBM | `witnesses/phase_diagram.json` | **확인** (합성) |
+| C2 | recalibration이 marginal inventory를 과입찰 | surplus **4.3M → 3.3M**(recal) vs **8.6M**(DR) | `witnesses/recal_trap.json` | **확인** (합성) |
+| — | de-risk probe (full-inventory regret) | **12/12** 셀에서 디바이어싱 regret 낮음 | `witnesses/probe_debiasing_bidding_value.json` | **GO** |
+| ⚓ | 실세계 anchor (음성 절반) | robust vs LR, **NOT** vs LGB, **I²=0.82** | [`old/`](old/) (iPinYou fair-split) | canonical |
 
 ---
 
-## 문제 — win selection bias
+## 질문 — decision layer
 
-<p align="center">
-  <img src="assets/funnel_selection_bias.ko.svg" alt="Bid → Win → Click 퍼널: click은 이긴 경매에서만 관측된다" width="820">
-</p>
+디바이어싱 *방법*은 **Foundation**(선점)이다: win-tower-as-propensity (MTAE, CIKM'21),
+ESMM/ESCM² 추정량 (SIGIR'18/'22), "디바이어싱이 평균적으로 입찰을 돕는다" (BGD, KDD'16). 어떤 선행도 그
+보정이 **언제** 입찰 *의사결정*을 바꾸는지, 그리고 **얼마나 강한** 경쟁자 대비인지를 plot하지 않았다.
+이것이 유일하게 열린 층이고, 실제 iPinYou 프로젝트가 천장에 부딪힌 지점이다: flat-bid 로깅이 lost inventory를
+검열해, 결정적 반사실("다른 입찰가였다면 이겼을까, 그게 가치 있었나?")이 셀의 87%에서 **관측 불가**다.
 
-bid는 **Bid → Win → Click** 퍼널을 통과한다. **129.5M** bid 중 **30.6M**만 경매에서 이겨
-(impression이 되고, win rate ≈ 24%) 그 위에서만 click이 관측된다(**~23K**, CTR ≈ 0.075%). *진(lost)*
-bid의 click 결과는 검열되므로, winner에서 측정할 수 있는 CTR은 모집단 CTR이 아니다. `P(click | win) ≠
-P(click)`이다. 이 편향된 pCTR을 가치 추정 `V = pCTR × CPC`에 넣으면 bid도 편향된다. **디바이어싱**은
-bidder가 가격을 매겨야 할 unbiased pCTR을 복원하는 것을 목표로 한다.
+그래서 이를 **통제 가능한 semi-synthetic testbed**([`methods.md`](methods.md))로 옮긴다: features
+x ∈ ℝ⁸ → **nonlinear** ground-truth pCTR; **market price = iPinYou median(68 CPM)에 calibration한 lognormal**;
+win-selection-bias knob (강도 γ, 이질성 θ); 그리고 — 핵심 — **click + price가 모든 입찰(낙찰·패찰)에 대해
+관측된다.** metric = full-inventory **decision-value regret** `(S_oracle − S_model)/S_oracle`.
 
-입찰이 향하는 시장은 heavy-tailed이고 right-censored다.
+## C1 — 경쟁자 강도가 payoff를 지배
 
-<p align="center">
-  <img src="results/figures/portfolio/fig_market_cdf.png" alt="Kaplan-Meier market price CDF와 exchange별 경쟁" width="840">
-</p>
+각 추정량을 두 capacity로: **linear (≈ LR)**, **GBM (≈ LGB)** — 이것이 *competitor-strength 축*이다.
+debiaser는 고정(GBM + IPW, win-propensity 가중 ≈ iPinYou neural debiaser).
+`edge ≡ regret(baseline) − regret(debiaser)`.
 
-Market price는 median **68** / mean **78** CPM, floor binding **21%**다. Kaplan-Meier win-rate 곡선
-(max bid 300에서 right-censored)과 exchange별로 뚜렷이 다른 경쟁(F(300) = 0.69 / 0.29 / 0.12)이 이후의
-bid-shading 모델을 이끈다.
-
-## 접근 — `ESCM²-WC`
-
-<p align="center">
-  <img src="assets/escm2wc_architecture.ko.svg" alt="ESCM2-WC three-tower 아키텍처와 dual-purpose Win Tower" width="960">
-</p>
-
-[ESMM](https://arxiv.org/abs/1804.07931) / [ESCM²](https://arxiv.org/abs/2204.05125)를
-impression→click→conversion 퍼널에서 **bid→win→click**으로 적응시켜, 공유 embedding trunk가 세 tower에
-들어간다.
-
-| Tower | 예측 | 역할 |
+| 경쟁 baseline | 평균 edge | γ = 0.4 → 1.2 |
 |---|---|---|
-| **Win Tower** | `P(win \| x)` | 디바이어싱을 위한 propensity **이자** bid shading을 위한 win-rate 모델 (dual-purpose) |
-| **CTR Tower** | `P(click \| win, x)` | doubly-robust(DR) weight로 학습되는 디바이어싱된 pCTR |
-| **Imputation Tower** | `δ̂` (CTR error) | 추정량을 *doubly robust*하게 만드는 control variate |
+| **linear (≈ LR)** | **+24.2 pp** | +16 → +45 pp (selection 강도와 함께 증가) |
+| **GBM (≈ LGB)** | **−1.9 pp** | ≈ 0 / 약간 음수 |
 
-DR 보정(`ŵ = win / P̂(win)`, clipped)은 propensity 모델 *또는* outcome 모델 중 하나만 맞아도 unbiased다.
-**ESMM joint constraint** `P(click,win) = P(win)·P(click|win)`이 tower들을 묶는다. ablation 사다리는
-**Biased LGB → ESMM-WC → ESCM²-WC (IPW) → ESCM²-WC (DR)**다.
+디바이어싱은 *약한* linear 경쟁자를 robust하게 이기지만(selection이 셀수록 더), **강한 GBM은 못 이긴다.**
+이것이 정확히 iPinYou fair-split 결론 — *robust vs LR, NOT robust vs LGB, Cochran Q I²=0.82* — 을
+통제된 환경에서 **재현·메커니즘적으로 설명**한 것이다. 실제 결과는 diagram의 **음성 절반**이고, testbed가
+통제 가능한 양성 절반을 공급한다.
 
-## 정직한 연구 아크
+## C2 — Recalibration trap
 
-<p align="center">
-  <img src="assets/falsification_arc.ko.svg" alt="Falsification-first 연구 아크" width="960">
-</p>
-
-재설계 이전 프로그램은 prediction AUC를 쫓았고 디바이어싱이 logistic regression에 *진다*고 보고했다.
-Root-cause audit은 그것이 **evaluation artifact**임을 보였다. train/test 광고주가 서로 disjoint였기 때문에
-"LR 0.714"는 단 하나의 unseen 광고주에 올라탄 결과였고(그 광고주를 빼면 *모든* 모델이 ≈0.499, 즉 chance로
-무너졌다). **공정한(fair)** 광고주별 시간 split에서는 artifact가 사라지고(LR 0.714→0.554, LGB
-0.479→0.632), 방어 가능한 thesis는 raw ranking이 아니라 **calibration → bidding surplus**가 된다.
+솔깃한 해법 — 편향 모델을 recalibration — 은 **함정**이다. 강한 selection + linear baseline
+(`recal_trap.json:linear_strong`, γ=1.2):
 
 <p align="center">
-  <img src="results/figures/portfolio/fig_artifact_vs_fair.png" alt="원래의 '디바이어싱이 진다' 헤드라인은 split artifact였다" width="640">
+  <img src="witnesses/figures/fig_recal_trap.png" alt="recalibration이 입찰가를 부풀려 unprofitable inventory를 더 따내 surplus가 하락; DR 디바이어싱은 oracle의 ~88% 회복" width="900">
 </p>
+
+| | biased | + recalibration | debiased (DR) | oracle |
+|---|---|---|---|---|
+| mean bid | 137.8 | **193.5** ↑ | 135.1 | — |
+| unprofitable-win share | 0.495 | **0.509** | **0.219** | — |
+| won surplus | 4.3M | **3.3M** ↓ | **8.6M** | 9.7M |
+
+recalibration은 예측의 *레벨*을 올려 입찰가를 부풀리고(137.8 → 193.5), true value < clearing price인
+*marginal* inventory를 따내 낙찰의 절반 이상이 unprofitable이 되며 surplus가 **하락**(4.3M → 3.3M)한다.
+DR 디바이어싱은 레벨 인플레 없이 *shape*를 고쳐 **oracle의 88%**(8.6M / 9.7M)에 도달한다. trap은
+*약한 baseline / 강한 selection*에서 강하고 강한 GBM 대비(`recal_trap.json:gbm_strong`)에선 약하다 — C1과 일관.
 
 ---
 
-## 결과 (5분)
+## 🔬 정직한 scope
 
-### 1 · Ranking과 ablation 사다리
+이 연구는 `[sketch · 합성검증]`이다. 솔직히 말하면([`review.md`](review.md)):
 
-<p align="center">
-  <img src="results/figures/portfolio/fig_ablation_ladder.png" alt="Fair-split ablation 사다리 winners-AUC와 IEB" width="900">
-</p>
+- **방법이 아니다.** 새 추정량/식별 결과가 아니다 — 그것들은 Foundation. 기여는 디바이어싱이 *언제/왜* 입찰을
+  바꾸는지를 **competitor-strength** 축에서 **특성화**한 것이다.
+- **음성 영역을 숨기지 않고 보고한다.** 디바이어싱은 강한 GBM을 **못 이기고**, recalibration이 보편적으로
+  나쁜 것도 아니다. 실제 iPinYou anchor(음성 절반)도 동등한 비중으로 싣는다.
+- **Semi-synthetic.** 일반화는 phase diagram의 *경계*에 한정, truthful 2nd-price 중심.
+- **Full result로 가는 경로:** ESCM²-WC neural anchor (GPU), Open-Bandit-Dataset OPE sanity anchor,
+  recalibration 과입찰 조건의 작은 정리, strategy/budget 축.
 
-공정한 split에서 모든 neural 디바이어싱 변형은 **~0.66 winners-only AUC**에 군집한다(모두 LR 0.554를 이기고,
-LGB 0.632와 같거나 그 위). raw calibration은 크게 들쭉날쭉하지만(ESMM-WC IEB −37.8) **모든 rung이 IEB ≈ 0
-으로 recalibrate된다**. DR은 AUC를 최고로 만들기 때문이 아니라 calibration→decision 파이프라인 때문에
-primary 모델이다 — 깔끔한 monotone이 아니라 *군집된* 사다리에 대한 정직한 읽기다.
+## Foundation — iPinYou 연구 (`old/`)
 
-### 2 · Calibration — global 다음 광고주별, 완전히 해결
-
-<p align="center">
-  <img src="results/figures/portfolio/fig_calibration_journey.png" alt="Calibration journey: global isotonic 다음 광고주별 map" width="900">
-</p>
-
-Neural winners pCTR은 과소예측한다(IEB 0.597, 모든 decile이 낮음). **Cross-fit isotonic**(K=5, leak-free)이
-global bias를 rank-preserving하게 0으로 만들고, **광고주별** map이 잔차를 **0.0006**까지(세 자릿수) 밀어내며
-심지어 global AUC도 끌어올린다. Training-stage calibration은 테스트했고 **negative**다(ranking을 무너뜨리지
-않고 calibrate하는 train-time knob이 없음). 저렴한 post-hoc isotonic이 답이다.
-
-### 3 · Decision value — 선형 대비 robust, 강한 GBM 대비 아님
-
-<p align="center">
-  <img src="results/figures/portfolio/fig_surplus_grid.png" alt="전략별 decision value" width="840">
-</p>
-
-Recalibrate된 pCTR을 실제 지불 가격 위의 **second-price** 경매에 가격으로 넣어(모델 간 mean value를 동일화)
-realized surplus를 얻는다. 2p-optimal `truthful` 전략에서 neural은 **LR을 +27.4M**로 이기지만(cluster CI
-[17.7M, 37.8M], **0 제외**) **LGB는 단 +9.4M**로만 이긴다(CI [−11.1M, 40.7M], **0 포함**). 이 페이지 맨
-위의 forest plot이 *왜*인지를 해소한다. neural−LGB 우위는 **광고주별로 이질적**이고(I²=0.82, p=0.0002),
-5개 중 2개에서 양수, 1개에서만 CI 유의(adv 3427, +13.9M)이며, **leave-one-advertiser-out은 평균을 음수로
-뒤집는다**(−1.1M). **정직한 결론: 디바이어싱은 선형 모델 대비 입찰을 개선한다. 강한 GBM 대비로는 겉보기
-이득이 단 한 광고주에서 나온 것이며 robust하지 않다.**
-
-### 4 · Full-inventory value — won-only 한계는 거의 묶이지 않는다
-
-<p align="center">
-  <img src="results/figures/portfolio/fig_policy_value_decomp.png" alt="Full-inventory policy value는 99% 이상 exact" width="780">
-</p>
-
-19.4M개 test bid 전체에 대해 second-price로 value를 투영한다. truthful bid는 logged flat bid보다 *아래*에
-있어 각 정책은 *관측된* 부분집합을 다시 이긴다 — **모든 모델 value의 ≥99.26%가 exact**다(≤0.74%만 modeled).
-Full-inventory gap은 won-only 결과와 일관된다(neural−LR +22.0M ✓, neural−LGB +9.7M ✗).
-
-### 5 · Bid-shading 전략
-
-<p align="center">
-  <img src="results/figures/portfolio/fig_bidding_strategies.png" alt="Bid-shading 전략 비교와 alpha sweep" width="840">
-</p>
-
-공정한 split에서 `truthful`(2p-optimal)이 realized surplus를 **5.13e8**로 최고로 만든다. 선형 α-sweep은
-고전적인 win-rate/cost tradeoff를 그린다(α가 커질수록 surplus ↑, ROI ↓). Win Tower의 win-rate 모델
-(AUC ≈ 0.91)과 exchange-conditional market CDF가 optimal/dual-regime 전략을 이끈다.
-
-### 6 · Budget pacing
-
-<p align="center">
-  <img src="results/figures/portfolio/fig_pacing.png" alt="공정한 split에서의 budget pacing" width="820">
-</p>
-
-24시간 주기에 대한 PID budget-pacing 컨트롤러. **WR-weighted hourly allocation은 budget 수준 전반에서
-uniform pacing 대비 surplus를 +11–14% 끌어올린다** — 단순히 균등하게 쓰는 게 아니라 고가치 시간대로 더
-똑똑하게 배분한 결과다.
-
-### 7 · Causal 탐색 (CATE + SCM/DAG) — *hypothesis-generating*
-
-<p align="center">
-  <img src="results/figures/portfolio/fig_cate.png" alt="CATE bid-effect 대조" width="780">
-</p>
-<p align="center">
-  <img src="results/figures/portfolio/fig_scm.png" alt="SCM DAG bid effect와 refutation 검정" width="780">
-</p>
-
-bid를 treatment로 보고, naive within-advertiser 대조와 DoWhy backdoor 추정 둘 다 **bid → surplus ≈ −0.066**
-(overpayment 효과; refutation 검정 모두 robust)과 *음의* volume 채널(τ_win < 0)을 찾는다. 이것들은
-**confounded이고 exploratory**다 — iPinYou의 flat-bid logging과 won-only 검열은 신뢰할 만한 causal 추정을
-데이터 천장에 묶어 둔다(문서화된 P1 NO-GO). causal claim이 아니라 hypothesis-generating으로 정직하게 보고한다.
-
-### 8 · Serving
-
-FastAPI bidder가 LR pCTR 모델 + exchange-conditional market CDF를 로드하고 전체 루프
-(request → 30 features → pCTR → `V = pCTR × CPC` → bid shading → response)를 train/serve-skew 가드와 함께
-**sub-100ms**로 돌린다. `src/serving/app.py` 참고.
-
----
-
-## 💡 핵심 인사이트
-
-- **진짜 효과 vs measurement artifact.** 철회(그리고 오해를 부르는 cluster mean을 대체한 heterogeneity
-  분석)가 이 프로젝트의 핵심 역량이다 — "디바이어싱이 이긴다"가 언제 진짜인지(vs LR), 언제 단 한 광고주인지
-  (vs LGB)를 아는 것.
-- **Calibration ≠ ranking.** raw calibration은 모델 간 IEB −38에서 +0.6까지 걸쳐 있지만, 모두 ≈0으로
-  recalibrate되고 ranking은 거의 불변이다 — post-hoc isotonic이 옳고 저렴한 도구다.
-- **데이터에는 천장이 있다.** Flat-bid logging은 lost-inventory value와 bid-causal-effect를 식별 불가능하게
-  만든다. 우리는 관측 가능한 것(policy value의 ≥99%)을 보고하고 나머지는 exploratory로 라벨링한다.
-
-## ⚠️ 한계와 교훈
-
-| 이슈 | 근거 | 완화 / 정직한 프레이밍 |
-|---|---|---|
-| Won-only surplus는 하한 | lost inventory 검열됨; F(b\|x)는 13% cell에서만 calibrate (P1 **NO-GO**) | policy value의 ≥99.26%가 exact; aggressive-policy value는 여기서 검정 불가 |
-| 낮은 cluster power | 광고주 5개; MDE ~11.5M ≫ 관측 mean ~1.9M | 단일 cluster mean이 아니라 heterogeneity(I²=0.82) 보고 |
-| neural−LGB not robust | 5개 중 2개 양수, CI-sig 1개; LOAO는 음수로 뒤집힘 | "디바이어싱이 이긴다"가 아니라 정직한 verdict로 기술 |
-| CATE / SCM 미식별 | flat-bid + 검열됨; τ_win은 직관에 반함 | **exploratory / hypothesis-generating**으로 라벨링 |
-| Ablation이 AUC에서 monotone 아님 | ESMM-WC 0.674 > DR 0.658 | DR은 AUC가 아니라 calibration/decision 때문에 primary; 있는 그대로 보고 |
-
-## 🧪 부록
-
-- **Ablation grid** (5개 rung 전체의 winners-AUC + IEB raw→recal) — [`NUMBERS_LEDGER.md §K`](docs/NUMBERS_LEDGER.md).
-- **Sensitivity** — decision value는 CPC sweep {1e5, 2e5, 4e5}와 max-bid {300, 600}에서 부호 안정
-  (`stage_b2_surplus.json`); bid-shading α-sweep과 pacing budget-sweep는 §L/§M.
-- **Refutation 검정** — SCM bid→{surplus,win}은 random-common-cause / placebo / data-subset 통과 (§O).
-- **Market modeling** — KM CDF, exchange-conditional, temporal drift KS=0.118, lognormal fit (§ market).
-- 전체 evaluation contract: [`docs/evaluation_protocol.md`](docs/evaluation_protocol.md) (frozen).
-
----
+동기가 된 선행 연구는 [**`old/`**](old/)에 있다: 실 iPinYou RTB 데이터의 **win-selection-bias 디바이어싱
+포트폴리오** 전체 — ESCM²-WC (doubly-robust 3-tower), calibration 스토리(global IEB 0.597 → 0; 광고주별
+잔차 → 0.0006), 그리고 **정직한 연구 arc**(첫 AUC 헤드라인을 split artifact로 retraction). 그 결정적이고
+*정직한* 결론 — **디바이어싱의 입찰 가치는 linear LR 대비 robust지만 강한 GBM 대비 NOT robust (I²=0.82)** —
+가 바로 이 testbed가 재현하는 실세계 **음성 절반**이다. 거기서의 데이터 천장(검열된 lost inventory)이 이
+연구를 관측 가능한 testbed로 옮긴 *이유*다.
 
 ## 저장소 맵
 
 ```
-rtb_ipinyou/
-├── src/
-│   ├── data/ · features/                      bz2 logs → unified Parquet, 30 features
-│   ├── models/    base · esmm_wc · escm2_wc    공유 trunk + Win/CTR/Imputation towers (DR/IPW)
-│   ├── debiasing/ win_propensity · diagnostics propensity, ESS/overlap/positivity
-│   ├── metrics/   calibration · cluster_inference  cross-fit isotonic, segment maps, Q/I²/MDE
-│   ├── bidding/   shading · simulator · policy_value · pacing  shading + surplus eval + PID pacing
-│   ├── causal/    cate · scm                   CATE, DAG refutation (exploratory)
-│   ├── win_rate/  nonparametric · survival     Kaplan-Meier market CDFs
-│   └── serving/   app.py                       FastAPI RTB bidder (<100ms)
-├── scripts/
-│   ├── train.py · preprocess.py · build_features.py
-│   ├── stage_a/   recalibrate · stage_b2_surplus · power_analysis · policy_value ·
-│   │              ablation_ladder · bidding_fair · pacing_fair · cate_fair · scm_fair
-│   └── portfolio/ make_figures.py · make_diagrams.py
-├── results/stage_a/  *.json ledgers + *_summary.md       (canonical, frozen)
-├── results/figures/portfolio/  12 hero figures (committed JSON에서 재생성)
-├── docs/   technical_report · evaluation_protocol · NUMBERS_LEDGER · GLOSSARY · archive/
-└── assets/ *.svg concept diagrams (EN + .ko)
+README.md / README.ko.md   ← flagship front (EN / KO twin)
+concept.md                 ← 1-pager: 동기 → 검증 가능 주장
+methods.md                 ← testbed · models · results (수치 = witness JSON)
+review.md                  ← 정직한 scoping · 선행연구 위치 · full paper 경로
+MANIFEST.md                ← canonical 맵: witness JSON → 주장 → figure
+witnesses/                 ← 본 연구
+  phase_diagram.py + .json     C1 (competitor-strength sweep)
+  recal_trap.py + .json        C2 (recalibration trap)
+  probe_*.py + .json           de-risk probe (GO, 12/12)
+  figures/make_figures.py      JSON → figure
+repro/check.py             ← green harness: JSON에서 C1 + C2 재확인
+old/                       ← Foundation: iPinYou 디바이어싱 연구 (실세계 anchor)
 ```
 
-## 빠른 시작 — figure 재현
-
-포트폴리오 figure/diagram은 **committed result JSON에서** 재생성된다 — 학습이나 데이터 접근 불필요:
+## ♻️ 재현
 
 ```bash
-pip install -e ".[dev]"                       # 또는: pip install matplotlib numpy
-python scripts/portfolio/make_figures.py      # → results/figures/portfolio/*.png  (12 figures)
-python scripts/portfolio/make_diagrams.py     # → assets/*.svg (+ .ko)
+pip install -r requirements.txt
+python witnesses/phase_diagram.py      # → witnesses/phase_diagram.json
+python witnesses/recal_trap.py         # → witnesses/recal_trap.json
+python witnesses/figures/make_figures.py
+python repro/check.py                  # GREEN — canonical JSON에서 C1 + C2 재확인
 ```
 
-강화된 실험은 공정한 split 위에서 재실행된다(CPU, committed prediction에서):
-`python scripts/stage_a/{bidding_fair,pacing_fair,cate_fair,scm_fair,ablation_ladder}.py`. 전체 파이프라인
-(preprocess → features → train → evaluate): [`docs/scripts_tutorial.md`](docs/scripts_tutorial.md).
-
-## 기술 스택
-
-JAX/Flax (neural towers, SPMD multi-GPU) · LightGBM (baselines + propensity) · scikit-learn (isotonic,
-diagnostics) · EconML / DoWhy (causal) · Hydra + Typer (config/CLI) · matplotlib (figures). Python 3.12.
-
-## 데이터셋 & 출처
-
-[**iPinYou** RTB dataset](http://contest.ipinyou.com/) (2013, seasons 2–3), iPinYou가 연구용으로
-라이선스하며 여기에 **재배포하지 않는다**(`.gitignore` 참고). 방법: Ma et al., *ESMM* (SIGIR 2018);
-Wang et al., *ESCM²* (SIGIR 2022). Causal tooling: Athey & Wager causal forests; Chernozhukov et al. DML;
-DoWhy.
-
-## 참고문헌
-
-- Ma et al., *Entire Space Multi-Task Model (ESMM)*, SIGIR 2018.
-- Wang et al., *ESCM²: Entire Space Counterfactual Multi-Task Model*, SIGIR 2022.
-- Athey & Wager, *Generalized Random Forests*, 2018 · Chernozhukov et al., *Double/Debiased ML*, 2018.
-- Zhang et al., *Real-Time Bidding Benchmarking with the iPinYou Dataset*.
-
-## 라이선스
-
-코드는 [MIT License](LICENSE) 하에 있다. iPinYou 데이터셋은 **포함되지 않으며** iPinYou의 약관을 따른다.
+모든 수치는 witness JSON에서 verbatim, figure·표는 거기서 재생성된다. 주장 → witness → figure 맵은
+[`MANIFEST.md`](MANIFEST.md) 참조.

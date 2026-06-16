@@ -1,0 +1,66 @@
+{
+  "_meta": {
+    "claim": "Recalibrating a selection-biased pCTR model raises bids -> wins more marginal impressions where true value < clearing price (negative surplus); DR debiasing avoids the blanket level inflation.",
+    "metric": "expected full-inventory 2nd-price surplus; unprofitable = won & true value < price"
+  },
+  "cases": {
+    "linear_strong": {
+      "gamma": 1.2,
+      "baseline_capacity": "linear",
+      "biased": {
+        "mean_bid": 137.8,
+        "n_wins": 82230,
+        "won_surplus": 4305572.9,
+        "n_unprofitable_wins": 40674,
+        "unprofitable_win_share": 0.495,
+        "surplus_from_unprofitable": -1372640.6
+      },
+      "biased_recal": {
+        "mean_bid": 193.5,
+        "n_wins": 85770,
+        "won_surplus": 3259336.6,
+        "n_unprofitable_wins": 43683,
+        "unprofitable_win_share": 0.509,
+        "surplus_from_unprofitable": -2810529.8
+      },
+      "debiased": {
+        "mean_bid": 135.1,
+        "n_wins": 50630,
+        "won_surplus": 8580358.4,
+        "n_unprofitable_wins": 11096,
+        "unprofitable_win_share": 0.219,
+        "surplus_from_unprofitable": -193075.0
+      },
+      "oracle_surplus": 9742923.5
+    },
+    "gbm_strong": {
+      "gamma": 1.2,
+      "baseline_capacity": "gbm",
+      "biased": {
+        "mean_bid": 149.3,
+        "n_wins": 50205,
+        "won_surplus": 8958133.5,
+        "n_unprofitable_wins": 9086,
+        "unprofitable_win_share": 0.181,
+        "surplus_from_unprofitable": -192872.3
+      },
+      "biased_recal": {
+        "mean_bid": 176.7,
+        "n_wins": 30287,
+        "won_surplus": 8693156.0,
+        "n_unprofitable_wins": 3506,
+        "unprofitable_win_share": 0.116,
+        "surplus_from_unprofitable": -314569.6
+      },
+      "debiased": {
+        "mean_bid": 135.1,
+        "n_wins": 50630,
+        "won_surplus": 8580358.4,
+        "n_unprofitable_wins": 11096,
+        "unprofitable_win_share": 0.219,
+        "surplus_from_unprofitable": -193075.0
+      },
+      "oracle_surplus": 9742923.5
+    }
+  }
+}

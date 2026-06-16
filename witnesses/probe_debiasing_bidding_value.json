@@ -1,0 +1,203 @@
+{
+  "cells": [
+    {
+      "gamma": 0.5,
+      "theta": 0,
+      "win_rate": 0.6,
+      "surplus": {
+        "oracle": 606477.9,
+        "biased": 606031.4,
+        "biased_recal": 605422.3,
+        "debiased": 605811.4
+      },
+      "regret_biased": 0.001,
+      "regret_recal": 0.002,
+      "regret_debiased": 0.001,
+      "debias_beats_recal_pp": 0.06
+    },
+    {
+      "gamma": 0.5,
+      "theta": 30,
+      "win_rate": 0.6,
+      "surplus": {
+        "oracle": 618619.9,
+        "biased": 618324.3,
+        "biased_recal": 617663.7,
+        "debiased": 618217.9
+      },
+      "regret_biased": 0.0,
+      "regret_recal": 0.002,
+      "regret_debiased": 0.001,
+      "debias_beats_recal_pp": 0.09
+    },
+    {
+      "gamma": 0.5,
+      "theta": 60,
+      "win_rate": 0.6,
+      "surplus": {
+        "oracle": 651709.7,
+        "biased": 651450.5,
+        "biased_recal": 650894.3,
+        "debiased": 651346.9
+      },
+      "regret_biased": 0.0,
+      "regret_recal": 0.001,
+      "regret_debiased": 0.001,
+      "debias_beats_recal_pp": 0.07
+    },
+    {
+      "gamma": 0.5,
+      "theta": 90,
+      "win_rate": 0.6,
+      "surplus": {
+        "oracle": 686965.7,
+        "biased": 686843.3,
+        "biased_recal": 686387.3,
+        "debiased": 686793.4
+      },
+      "regret_biased": 0.0,
+      "regret_recal": 0.001,
+      "regret_debiased": 0.0,
+      "debias_beats_recal_pp": 0.06
+    },
+    {
+      "gamma": 1.0,
+      "theta": 0,
+      "win_rate": 0.6,
+      "surplus": {
+        "oracle": 425150.6,
+        "biased": 422640.1,
+        "biased_recal": 412537.0,
+        "debiased": 422019.9
+      },
+      "regret_biased": 0.006,
+      "regret_recal": 0.03,
+      "regret_debiased": 0.007,
+      "debias_beats_recal_pp": 2.23
+    },
+    {
+      "gamma": 1.0,
+      "theta": 30,
+      "win_rate": 0.6,
+      "surplus": {
+        "oracle": 477208.4,
+        "biased": 476279.6,
+        "biased_recal": 473269.2,
+        "debiased": 475075.7
+      },
+      "regret_biased": 0.002,
+      "regret_recal": 0.008,
+      "regret_debiased": 0.004,
+      "debias_beats_recal_pp": 0.38
+    },
+    {
+      "gamma": 1.0,
+      "theta": 60,
+      "win_rate": 0.6,
+      "surplus": {
+        "oracle": 573459.9,
+        "biased": 572969.5,
+        "biased_recal": 571852.8,
+        "debiased": 572251.6
+      },
+      "regret_biased": 0.001,
+      "regret_recal": 0.003,
+      "regret_debiased": 0.002,
+      "debias_beats_recal_pp": 0.07
+    },
+    {
+      "gamma": 1.0,
+      "theta": 90,
+      "win_rate": 0.6,
+      "surplus": {
+        "oracle": 665855.1,
+        "biased": 665646.7,
+        "biased_recal": 665127.7,
+        "debiased": 665413.4
+      },
+      "regret_biased": 0.0,
+      "regret_recal": 0.001,
+      "regret_debiased": 0.001,
+      "debias_beats_recal_pp": 0.04
+    },
+    {
+      "gamma": 1.5,
+      "theta": 0,
+      "win_rate": 0.6,
+      "surplus": {
+        "oracle": 203812.5,
+        "biased": 200691.1,
+        "biased_recal": 165723.2,
+        "debiased": 196704.3
+      },
+      "regret_biased": 0.015,
+      "regret_recal": 0.187,
+      "regret_debiased": 0.035,
+      "debias_beats_recal_pp": 15.2
+    },
+    {
+      "gamma": 1.5,
+      "theta": 30,
+      "win_rate": 0.6,
+      "surplus": {
+        "oracle": 312939.9,
+        "biased": 311228.0,
+        "biased_recal": 302231.3,
+        "debiased": 308808.0
+      },
+      "regret_biased": 0.005,
+      "regret_recal": 0.034,
+      "regret_debiased": 0.013,
+      "debias_beats_recal_pp": 2.1
+    },
+    {
+      "gamma": 1.5,
+      "theta": 60,
+      "win_rate": 0.6,
+      "surplus": {
+        "oracle": 491616.5,
+        "biased": 491225.0,
+        "biased_recal": 490178.7,
+        "debiased": 490659.9
+      },
+      "regret_biased": 0.001,
+      "regret_recal": 0.003,
+      "regret_debiased": 0.002,
+      "debias_beats_recal_pp": 0.1
+    },
+    {
+      "gamma": 1.5,
+      "theta": 90,
+      "win_rate": 0.6,
+      "surplus": {
+        "oracle": 639439.5,
+        "biased": 639280.7,
+        "biased_recal": 638772.0,
+        "debiased": 638873.2
+      },
+      "regret_biased": 0.0,
+      "regret_recal": 0.001,
+      "regret_debiased": 0.001,
+      "debias_beats_recal_pp": 0.02
+    }
+  ],
+  "verdict": {
+    "GO": true,
+    "n_cells_debiased_lower_regret": "12/12",
+    "n_cells_edge_ge_1pp": 3,
+    "best_cell": {
+      "gamma": 1.5,
+      "theta": 0,
+      "regret_recal": 0.187,
+      "regret_debiased": 0.035,
+      "debias_beats_recal_pp": 15.2
+    },
+    "reading": "GO \u2014 across the (\u03b3,\u03b8) grid debiasing has consistently LOWER bidding regret than recalibration on FULL inventory (the censored question iPinYou cannot answer). The edge is real but modest; the clean magnitude + phase boundary is the research to do."
+  },
+  "dgp": {
+    "N": 300000,
+    "D": 8,
+    "base_rate": "~1%",
+    "selection": "market price ~ exp(\u03b3\u00b7x\u03b4), \u03b4=cos\u03b8\u00b7\u03b2+sin\u03b8\u00b7\u03b2\u22a5"
+  }
+}
