@@ -49,7 +49,7 @@ RTB에서 입찰자는 자신의 입찰이 경매에서 **낙찰(win)**되었을
 ## 접근 — `ESCM²-WC` (이중 강건, 3-tower)
 
 <p align="center">
-  <img src="assets/escm2wc_architecture.ko.svg" alt="ESCM2-WC 3-tower 아키텍처, Win 타워 이중 활용" width="860">
+  <img src="assets/escm2wc_architecture.ko.svg" alt="ESCM2-WC 3-tower 아키텍처: 공유 임베딩 → Win/CTR/Imputation MLP 타워, 이중 강건 클릭 손실 + ESMM 제약, Win 타워 이중 활용" width="960">
 </p>
 
 [ESMM](https://arxiv.org/abs/1804.07931) / [ESCM²](https://arxiv.org/abs/2204.05125)를 노출→클릭→전환

@@ -53,13 +53,14 @@ def lines(x, y, rows, size=13, fill=INK, weight="normal", anchor="middle", lh=18
                    for i, r in enumerate(rows))
 
 
-def arrow(x1, y1, x2, y2, color=INK, width=2.2, head=11, halfw=5.5):
+def arrow(x1, y1, x2, y2, color=INK, width=2.2, head=11, halfw=5.5, dash=None):
     ang = math.atan2(y2 - y1, x2 - x1)
     bx, by = x2 - head * math.cos(ang), y2 - head * math.sin(ang)
     p2 = (bx - halfw * math.sin(ang), by + halfw * math.cos(ang))
     p3 = (bx + halfw * math.sin(ang), by - halfw * math.cos(ang))
+    da = f' stroke-dasharray="{dash}"' if dash else ""
     return (f'<line x1="{x1}" y1="{y1}" x2="{bx:.1f}" y2="{by:.1f}" stroke="{color}" '
-            f'stroke-width="{width}" stroke-linecap="round"/>'
+            f'stroke-width="{width}" stroke-linecap="round"{da}/>'
             f'<polygon points="{x2:.1f},{y2:.1f} {p2[0]:.1f},{p2[1]:.1f} {p3[0]:.1f},{p3[1]:.1f}" '
             f'fill="{color}"/>')
 
@@ -68,6 +69,22 @@ def svg(w, h, body) -> str:
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" '
             f'height="{h}" font-family="{FONT}">'
             f'<rect x="0" y="0" width="{w}" height="{h}" fill="{GRIDBG}"/>{body}</svg>')
+
+
+def panel(x, y, w, h, fill=CARD, stroke=INK, sw=1.4, rx=10, shadow=True):
+    """A card with a soft offset drop-shadow (no <filter>; GitHub-safe)."""
+    s = rect(x + 3, y + 4, w, h, fill="#0F172A", stroke="none", sw=0, rx=rx, opacity=0.10) if shadow else ""
+    return s + rect(x, y, w, h, fill=fill, stroke=stroke, sw=sw, rx=rx)
+
+
+def chip(x, y, w, h, label, fill="#F1F5F9", stroke="#94A3B8", tsize=10.5, tcol=INK):
+    return rect(x, y, w, h, fill=fill, stroke=stroke, sw=1.0, rx=6) + \
+        text(x + w / 2, y + h / 2 + tsize * 0.35, label, tsize, tcol)
+
+
+def nodec(cx, cy, r, glyph, stroke, fill="#FFFFFF", gsize=13):
+    return (f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{fill}" stroke="{stroke}" '
+            f'stroke-width="1.6"/>') + text(cx, cy + gsize * 0.34, glyph, gsize, stroke, "bold")
 
 
 # ==================================================================================================
@@ -114,50 +131,125 @@ def funnel(L) -> str:
 # Diagram 2 — ESCM2-WC 3-tower architecture (DR debiasing + dual-purpose Win Tower)
 # ==================================================================================================
 def architecture(L) -> str:
-    W, H = 940, 560
+    W, H = 1180, 760
+    PW, PC, PI = "#0D9488", "#4F46E5", "#9333EA"        # win / ctr / imputation
+    ALLc, WONc, LOSTc, AMBER = "#6B7280", "#0D9488", "#D97706", "#D97706"
+    pw, pc, pb, dh, ddr = "p̂_win", "p̂_ctr", "p̂_bid", "δ̂", "Δ_DR"
     b = []
-    b.append(text(W / 2, 38, L["title"], 21, INK, "bold"))
-    b.append(text(W / 2, 62, L["subtitle"], 13, MUTE))
+    b.append(text(W / 2, 36, L["title"], 22, INK, "bold"))
+    b.append(text(W / 2, 61, L["subtitle"], 13, MUTE))
 
-    # input + shared trunk (left)
-    b.append(rect(40, 250, 150, 70, fill=CARD, stroke=INK, sw=1.6))
-    b.append(lines(115, 282, L["input"], 13, INK, "bold", lh=17))
-    b.append(arrow(190, 285, 232, 285, INK))
-    b.append(rect(232, 235, 150, 100, fill="#EEF2FF", stroke=NEURAL, sw=2))
-    b.append(lines(307, 272, L["trunk"], 13, NEURAL, "bold", lh=17))
+    # ---------------- A. input features ----------------
+    ax, ay, aw, ah = 32, 150, 150, 196
+    b.append(panel(ax, ay, aw, ah, stroke=INK, sw=1.4))
+    b.append(text(ax + aw / 2, ay + 22, L["feat_h"], 11.5, INK, "bold"))
+    for i, g in enumerate(L["feat_groups"]):
+        b.append(chip(ax + 13, ay + 33 + i * 21, aw - 26, 17, g, tsize=9.3))
+    b.append(lines(ax + aw / 2, ay + ah - 22, L["feat_note"], 8.2, MUTE, lh=10))
+    b.append(arrow(ax + aw, ay + ah / 2, 197, ay + ah / 2, INK, 2.0))
 
-    # three towers (middle column)
-    towers = [
-        (435, 120, LGB, L["win_tower"], L["win_out"]),
-        (435, 250, NEURAL, L["ctr_tower"], L["ctr_out"]),
-        (435, 380, "#9333EA", L["imp_tower"], L["imp_out"]),
+    # ---------------- B. shared trunk ----------------
+    bx, by, bw, bh = 200, 158, 168, 180
+    b.append(panel(bx, by, bw, bh, fill="#EEF2FF", stroke=PC, sw=1.6))
+    b.append(text(bx + bw / 2, by + 22, L["trunk_h"], 11.5, PC, "bold"))
+    for i in range(6):
+        b.append(rect(bx + 20 + i * 8, by + 34, 6, 26, fill=PC, stroke="none", sw=0,
+                      rx=1, opacity=0.25 + 0.12 * (i % 3)))
+    b.append(text(bx + bw / 2 + 16, by + 50, L["embed_l"], 9, INK, anchor="start"))
+    b.append(text(bx + bw / 2, by + 76, "Embed 30×32 = [B, 960]", 9, MUTE))
+    b.append(chip(bx + 14, by + 88, bw - 28, 22, L["fm_l"], "#FFFFFF", PC, 8.4, MUTE))
+    b.append(text(bx + bw / 2, by + 128, "⊕ concat", 10, PC, "bold"))
+    b.append(rect(bx + 36, by + 138, bw - 72, 26, fill="#FFFFFF", stroke=PC, sw=1.4, rx=8))
+    b.append(text(bx + bw / 2, by + 155, "z ∈ ℝ⁹⁹²", 12, INK, "bold"))
+
+    # ---------------- C. three towers (horizontal MLP pipelines) ----------------
+    b.append(text(620, 96, L["tower_note"], 9.3, MUTE))
+    rows = [
+        (160, PW, L["win_name"], L["win_role"], [992, 64, 32, 1], "σ", pw),
+        (250, PC, L["ctr_name"], L["ctr_role"], [992, 128, 64, 1], "σ", pc),
+        (340, PI, L["imp_name"], L["imp_role"], [992, 128, 64, 1], L["lin"], dh),
     ]
-    for (x, y, col, name, out) in towers:
-        b.append(rect(x, y, 200, 95, fill=CARD, stroke=col, sw=2.2))
-        b.append(text(x + 100, y + 32, name, 14.5, col, "bold"))
-        b.append(lines(x + 100, y + 54, out, 11.5, MUTE, lh=15))
-        b.append(arrow(382, 285, x, y + 47, col, 1.8))
+    zx, zy = bx + bw, by + 90  # trunk z exit point
+    for (cy, col, name, role, dims, act, sym) in rows:
+        b.append(text(410, cy - 21, f"{name}  ·  {role}", 10.2, col, "bold", "start"))
+        b.append(arrow(zx, zy, 406, cy, col, 1.5, head=8, halfw=4))
+        cx = 410
+        for j, d in enumerate(dims):
+            faded = j == 0
+            b.append(rect(cx, cy - 15, 46, 30, fill="#E2E8F0" if faded else "#F8FAFC",
+                          stroke="#94A3B8" if faded else col, sw=1.1, rx=5))
+            b.append(text(cx + 23, cy + 4, str(d), 10.5, MUTE if faded else INK,
+                          "normal" if faded else "bold"))
+            if j < len(dims) - 1:
+                b.append(arrow(cx + 46, cy, cx + 54, cy, col, 1.2, head=5, halfw=2.5))
+            cx += 54
+        b.append(arrow(cx - 8, cy, 632, cy, col, 1.3, head=6, halfw=3))
+        b.append(nodec(645, cy, 13, act, col, gsize=11))            # activation
+        b.append(arrow(658, cy, 663, cy, col, 1.3, head=6, halfw=3))
+        b.append(rect(664, cy - 14, 74, 28, fill=col, stroke=col, sw=1.2, rx=14, opacity=0.16))
+        b.append(text(701, cy + 4, sym, 13, col, "bold"))
+        b.append(arrow(738, cy, 815, 360, col, 1.4, head=7, halfw=3.5))  # -> objective
 
-    # DR weighting: win tower propensity -> ctr loss
-    b.append(arrow(535, 215, 535, 248, MUTE, 1.8))
-    b.append(text(545, 236, L["dr_w"], 10, MUTE, "italic", "start", italic=True))
+    # dual-purpose Win Tower callout (top-right, level with Win row)
+    dx, dy, dw, dh2 = 860, 120, 288, 116
+    b.append(panel(dx, dy, dw, dh2, fill="#FFF7ED", stroke=AMBER, sw=1.5))
+    b.append(text(dx + dw / 2, dy + 22, L["dual_h"], 12, AMBER, "bold"))
+    b.append(lines(dx + 14, dy + 44, L["dual_a"], 9.6, MUTE, anchor="start", lh=14))
+    b.append(lines(dx + 14, dy + 82, L["dual_b"], 9.6, MUTE, anchor="start", lh=14))
+    b.append(arrow(740, 160, dx, dy + 28, AMBER, 1.5, dash="4,3"))
 
-    # ESMM joint constraint bracket linking win + ctr
-    b.append(rect(435, 478, 200, 56, fill="#F0FDF4", stroke=POS, sw=1.6))
-    b.append(text(535, 500, L["esmm_h"], 12.5, POS, "bold"))
-    b.append(text(535, 520, L["esmm_eq"], 12, MUTE))
+    # merge label
+    b.append(text(828, 352, L["outputs"], 9, MUTE, anchor="start"))
+    b.append(arrow(815, 360, 815, 386, INK, 2.2))
 
-    # dual-purpose Win Tower (right): two outputs
-    b.append(rect(700, 95, 210, 70, fill="#ECFEFF", stroke=LGB, sw=1.8))
-    b.append(text(805, 122, L["use_a_h"], 12.5, LGB, "bold"))
-    b.append(text(805, 142, L["use_a"], 11, MUTE))
-    b.append(arrow(635, 150, 700, 130, LGB, 1.8))
+    # ---------------- D. training objective panel ----------------
+    px, py, pwid, phgt = 250, 388, 900, 214
+    b.append(panel(px, py, pwid, phgt, fill="#FFFFFF", stroke=INK, sw=1.5))
+    b.append(text(px + pwid / 2, py + 22, L["obj_h"], 12.5, INK, "bold"))
+    # the three combine formulas
+    fchips = [
+        (262, 296, L["w_h"], f"ŵ = clip( win / clip({pw}, 0.05, 1), 0, 10 )", L["w_sub"]),
+        (566, 296, L["dr_h2"], f"{ddr} = {dh} + ŵ·(y − {pc} − {dh})", L["dr_sub"]),
+        (870, 264, L["esmm_h2"], f"{pb} = {pw} × {pc}", L["esmm_sub"]),
+    ]
+    for (fx, fwid, h_, eq_, sub_) in fchips:
+        b.append(rect(fx, py + 38, fwid, 46, fill="#F8FAFC", stroke="#CBD5E1", sw=1.1, rx=8))
+        b.append(text(fx + 10, py + 55, h_, 9, MUTE, "bold", "start"))
+        b.append(text(fx + fwid / 2, py + 72, eq_, 10, INK))
+        b.append(text(fx + fwid / 2, py + 80, sub_, 7.8, MUTE))
+    # five loss terminals
+    losses = [
+        ("ℒ_win", f"BCE({pw}, win)", L["dom_all"], ALLc),
+        ("ℒ_ctr", f"MSE({ddr})  · DR", L["dom_all"], ALLc),
+        ("ℒ_imp", f"MSE({dh}, y−{pc})", L["dom_won"], WONc),
+        ("ℒ_joint", f"BCE({pb}, click)", L["dom_all"], ALLc),
+        ("ℒ_cfr", f"⟨(1−win)·{dh}²⟩", L["dom_lost"], LOSTc),
+    ]
+    lw, lx = 170, 262
+    for nm, eq_, dom, dc in losses:
+        b.append(panel(lx, py + 100, lw - 8, 56, fill="#FFFFFF", stroke=dc, sw=1.3, shadow=False))
+        b.append(text(lx + (lw - 8) / 2, py + 120, nm, 12, dc, "bold"))
+        b.append(text(lx + (lw - 8) / 2, py + 136, eq_, 8.6, INK))
+        b.append(rect(lx + (lw - 8) / 2 - 32, py + 142, 64, 13, fill=dc, stroke="none",
+                      sw=0, rx=6, opacity=0.16))
+        b.append(text(lx + (lw - 8) / 2, py + 151, dom, 7.6, dc, "bold"))
+        lx += lw
+    b.append(text(px + pwid / 2, py + phgt - 12,
+                  "ℒ = ℒ_win + ( ℒ_ctr + 0.5·ℒ_imp ) + ℒ_joint + 0.1·ℒ_cfr",
+                  12, INK, "bold"))
 
-    b.append(rect(700, 185, 210, 70, fill="#ECFEFF", stroke=LGB, sw=1.8))
-    b.append(text(805, 212, L["use_b_h"], 12.5, LGB, "bold"))
-    b.append(text(805, 232, L["use_b"], 11, MUTE))
-    b.append(arrow(635, 165, 700, 215, LGB, 1.8))
-    b.append(text(805, 78, L["dual"], 12, INK, "bold"))
+    # ---------------- E. legend ----------------
+    ly = 640
+    b.append(text(40, ly, L["leg_dom"] + ":", 9.5, INK, "bold", "start"))
+    for i, (lab, c) in enumerate([(L["dom_all"], ALLc), (L["dom_won"], WONc), (L["dom_lost"], LOSTc)]):
+        gx = 150 + i * 150
+        b.append(rect(gx, ly - 9, 12, 12, fill=c, stroke="none", sw=0, rx=3, opacity=0.55))
+        b.append(text(gx + 18, ly, lab, 9.2, MUTE, anchor="start"))
+    b.append(text(640, ly, L["leg_fwd"], 9.2, MUTE, anchor="start"))
+    b.append(f'<line x1="600" y1="{ly - 4}" x2="636" y2="{ly - 4}" stroke="{INK}" stroke-width="2"/>')
+    b.append(text(870, ly, L["leg_sg"], 9.2, MUTE, anchor="start"))
+    b.append(f'<line x1="830" y1="{ly - 4}" x2="866" y2="{ly - 4}" stroke="{AMBER}" '
+             f'stroke-width="2" stroke-dasharray="4,3"/>')
     return svg(W, H, "".join(b))
 
 
@@ -228,34 +320,56 @@ FUNNEL_KO = dict(
 )
 
 ARCH_EN = dict(
-    title="ESCM²-WC (DR): 3-tower debiasing with a dual-purpose Win Tower",
-    subtitle="Shared trunk → Win / CTR / Imputation towers; doubly-robust correction + ESMM constraint",
-    input=["Features x", "(30 fields)"],
-    trunk=["Shared", "embedding + MLP", "trunk"],
-    win_tower="Win Tower", win_out=["P(win | x)", "propensity"],
-    ctr_tower="CTR Tower", ctr_out=["P(click | win, x)", "debiased pCTR"],
-    imp_tower="Imputation Tower", imp_out=["δ̂ = imputed", "CTR error"],
-    dr_w="DR weight: w = win / P(win)",
-    esmm_h="ESMM joint constraint",
-    esmm_eq="P(click,win) = P(win) × P(click|win)",
-    dual="Dual-purpose Win Tower",
-    use_a_h="(a) Debiasing", use_a="propensity for DR / IPW",
-    use_b_h="(b) Bid shading", use_b="win-rate model (AUC ≈ 0.91)",
+    title="ESCM²-WC (DR): a 3-tower entire-space model with a dual-purpose Win Tower",
+    subtitle="Shared embedding → Win / CTR / Imputation towers · doubly-robust click loss + ESMM constraint",
+    feat_h="Input features (30)",
+    feat_groups=["time", "geo · region/city", "slot / ad unit", "domain / creative",
+                 "advertiser", "price / exchange"],
+    feat_note=["categorical → Embed(32)", "numeric → Linear(1→32)"],
+    trunk_h="Shared representation",
+    embed_l="per-feature",
+    fm_l="+ FM  ½((Σe)²−Σe²) = [B,32]",
+    tower_note="each tower:  Dense → ReLU → Dropout 0.3        σ = sigmoid  ·  lin = identity",
+    win_name="Win Tower", win_role="propensity  P(win|x)",
+    ctr_name="CTR Tower", ctr_role="debiased  P(click|win,x)",
+    imp_name="Imputation Tower", imp_role="CTR-error control variate",
+    lin="lin",
+    dual_h="Dual-purpose Win Tower",
+    dual_a=["(a) training — DR propensity ŵ = win / P̂(win)", "      debiases the CTR loss"],
+    dual_b=["(b) serving — win-rate model for", "      first-price bid shading (AUC ≈ 0.91)"],
+    outputs="model outputs  p̂_win, p̂_ctr, δ̂",
+    obj_h="Training objective — doubly-robust click loss + ESMM entire-space constraint",
+    w_h="propensity weight", w_sub="self-normalized · p̂_win stop-grad",
+    dr_h2="doubly-robust residual", dr_sub="unbiased if propensity OR imputation is correct",
+    esmm_h2="ESMM constraint", esmm_sub="entire-space",
+    dom_all="all bids", dom_won="won only", dom_lost="lost only",
+    leg_dom="sample domain", leg_fwd="forward pass", leg_sg="stop-grad / weight feed",
 )
 ARCH_KO = dict(
-    title="ESCM²-WC (DR): Win Tower를 이중 활용하는 3-tower 디바이어싱",
-    subtitle="공유 트렁크 → Win / CTR / Imputation 타워; 이중 강건(DR) 보정 + ESMM 제약",
-    input=["피처 x", "(30개)"],
-    trunk=["공유", "임베딩 + MLP", "트렁크"],
-    win_tower="Win 타워", win_out=["P(win | x)", "성향점수(propensity)"],
-    ctr_tower="CTR 타워", ctr_out=["P(click | win, x)", "비편향 pCTR"],
-    imp_tower="Imputation 타워", imp_out=["δ̂ = 대체(impute)된", "CTR 오차"],
-    dr_w="DR: w = win / P(win)",
-    esmm_h="ESMM 결합 제약",
-    esmm_eq="P(click,win) = P(win) × P(click|win)",
-    dual="Win 타워 이중 활용",
-    use_a_h="(a) 디바이어싱", use_a="DR / IPW 성향점수",
-    use_b_h="(b) 비드 셰이딩", use_b="낙찰률 모델 (AUC ≈ 0.91)",
+    title="ESCM²-WC (DR): Win Tower를 이중 활용하는 3-tower 전체공간(entire-space) 모델",
+    subtitle="공유 임베딩 → Win / CTR / Imputation 타워 · 이중 강건(DR) 클릭 손실 + ESMM 제약",
+    feat_h="입력 피처 (30개)",
+    feat_groups=["시간", "지역 · region/city", "슬롯 / 광고면", "도메인 / 크리에이티브",
+                 "광고주", "가격 / 거래소"],
+    feat_note=["범주형 → Embed(32)", "수치형 → Linear(1→32)"],
+    trunk_h="공유 표현(representation)",
+    embed_l="피처별",
+    fm_l="+ FM  ½((Σe)²−Σe²) = [B,32]",
+    tower_note="각 타워:  Dense → ReLU → Dropout 0.3        σ = 시그모이드  ·  lin = 항등",
+    win_name="Win 타워", win_role="성향점수  P(win|x)",
+    ctr_name="CTR 타워", ctr_role="비편향  P(click|win,x)",
+    imp_name="Imputation 타워", imp_role="CTR 오차 제어변량(control variate)",
+    lin="lin",
+    dual_h="Win 타워 이중 활용",
+    dual_a=["(a) 학습 — DR 성향점수 ŵ = win / P̂(win)", "      가 CTR 손실을 디바이어싱"],
+    dual_b=["(b) 서빙 — 1차가격 비드 셰이딩용", "      낙찰률 모델 (AUC ≈ 0.91)"],
+    outputs="모델 출력  p̂_win, p̂_ctr, δ̂",
+    obj_h="학습 목적함수 — 이중 강건 클릭 손실 + ESMM 전체공간 제약",
+    w_h="성향 가중치", w_sub="자기정규화 · p̂_win stop-grad",
+    dr_h2="이중 강건 잔차", dr_sub="성향 또는 대체 모델 중 하나만 맞아도 비편향",
+    esmm_h2="ESMM 제약", esmm_sub="전체공간(entire-space)",
+    dom_all="전체 입찰", dom_won="낙찰만", dom_lost="패찰만",
+    leg_dom="표본 영역", leg_fwd="순전파", leg_sg="stop-grad / 가중치 입력",
 )
 
 ARC_EN = dict(

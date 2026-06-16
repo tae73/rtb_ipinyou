@@ -43,7 +43,7 @@ use the `payprice>0` subset (5,616,873 winners, 4,512 clicks).
 ## 2. Method — `ESCM²-WC`
 
 <p align="center">
-  <img src="../assets/escm2wc_architecture.svg" alt="ESCM2-WC architecture" width="840">
+  <img src="../assets/escm2wc_architecture.svg" alt="ESCM2-WC three-tower architecture with doubly-robust click loss and ESMM constraint" width="960">
 </p>
 
 A shared embedding+MLP trunk (30 features) feeds three towers:

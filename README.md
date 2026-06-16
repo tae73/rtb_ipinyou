@@ -53,7 +53,7 @@ bids are biased too. **Debiasing** aims to recover the unbiased pCTR a bidder sh
 ## The approach — `ESCM²-WC` (doubly-robust, 3-tower)
 
 <p align="center">
-  <img src="assets/escm2wc_architecture.svg" alt="ESCM2-WC three-tower architecture with a dual-purpose Win Tower" width="860">
+  <img src="assets/escm2wc_architecture.svg" alt="ESCM2-WC three-tower architecture: shared embedding to Win/CTR/Imputation MLP towers, doubly-robust click loss and ESMM constraint, dual-purpose Win Tower" width="960">
 </p>
 
 Adapting [ESMM](https://arxiv.org/abs/1804.07931) / [ESCM²](https://arxiv.org/abs/2204.05125) from the
