@@ -12,6 +12,7 @@ import numpy as np
 HERE = Path(__file__).resolve().parent
 WIT = HERE.parent
 ANCHOR_PURPLE, LINEAR_C, GBM_C, NEG, POS, INK, MUTE = "#4F46E5", "#6B7280", "#0D9488", "#DC2626", "#16A34A", "#111827", "#374151"
+CAP_GREY = "#9CA3AF"
 
 
 def _style():
@@ -33,33 +34,41 @@ def fig_phase_diagram():
     gammas = sorted({c["gamma"] for c in cells})
 
     def edge_by_gamma(cap):
-        return [np.mean([c["edge_vs_baseline_pp"] for c in cells if c["baseline"] == cap and c["gamma"] == g])
+        return [np.mean([c["debias_edge_ipw_pp"] for c in cells if c["capacity"] == cap and c["gamma"] == g])
                 for g in gammas]
+    sd_lin = float(np.mean([c["debias_edge_ipw_sd"] for c in cells if c["capacity"] == "linear"]))
+    sd_gbm = float(np.mean([c["debias_edge_ipw_sd"] for c in cells if c["capacity"] == "gbm"]))
 
-    fig, axes = plt.subplots(1, 2, figsize=(12.5, 5.2))
+    fig, axes = plt.subplots(1, 2, figsize=(12.8, 5.3))
+    # Panel A: within-capacity debiasing edge vs selection strength
     ax = axes[0]
-    ax.plot(gammas, edge_by_gamma("linear"), "o-", color=LINEAR_C, lw=2.4, ms=8, label="vs LINEAR baseline (≈ LR)")
-    ax.plot(gammas, edge_by_gamma("gbm"), "s-", color=GBM_C, lw=2.4, ms=8, label="vs GBM baseline (≈ LGB)")
+    ax.plot(gammas, edge_by_gamma("linear"), "o-", color=POS, lw=2.4, ms=8, label="IPW-debias a WEAK (linear ≈ LR) model")
+    ax.plot(gammas, edge_by_gamma("gbm"), "s-", color=NEG, lw=2.4, ms=8, label="IPW-debias a STRONG (gbm ≈ LGB) model")
     ax.axhline(0, color=INK, lw=1)
     ax.set_xlabel("win-selection-bias strength  γ")
-    ax.set_ylabel("debiasing edge (pp of decision-value regret)\n>0 = debiasing wins the bid")
+    ax.set_ylabel("WITHIN-CAPACITY debiasing edge (pp)\n>0 = debiasing improves the bid")
     ax.legend(fontsize=9.5, loc="upper left")
-    ax.set_title("Debiasing's bid value depends on COMPETITOR strength", fontsize=11.5, fontweight="bold")
-    # panel B: the asymmetry headline + iPinYou anchor
-    ax = axes[1]
-    bars = ax.bar(["vs LINEAR\n(≈ LR)", "vs GBM\n(≈ LGB)"],
-                  [summ["mean_edge_vs_linear_pp"], summ["mean_edge_vs_gbm_pp"]],
-                  color=[POS, NEG], edgecolor="white", width=0.6, zorder=3)
-    ax.axhline(0, color=INK, lw=1)
-    for b, v in zip(bars, [summ["mean_edge_vs_linear_pp"], summ["mean_edge_vs_gbm_pp"]]):
-        ax.text(b.get_x() + b.get_width() / 2, v + (0.8 if v >= 0 else -0.8), f"{v:+.1f}pp",
-                ha="center", va="bottom" if v >= 0 else "top", fontsize=12, fontweight="bold")
-    ax.set_ylabel("mean debiasing edge (pp)")
-    ax.set_title("Reproduces the real iPinYou result:\nrobust vs LR · NOT robust vs LGB (I²=0.82)",
+    ax.set_title("Debiasing helps a weak model (grows with γ),\nnot a strong one — capacity held fixed",
                  fontsize=11, fontweight="bold")
-    ax.text(0.5, 0.04, "◆ real-world anchor: iPinYou fair split", transform=ax.transAxes,
-            ha="center", fontsize=9, color=ANCHOR_PURPLE, style="italic")
-    fig.suptitle("WHEN does win-selection-bias debiasing improve the bid? — a controllable phase diagram",
+    # Panel B: honest headline + the capacity confound shown SEPARATELY
+    ax = axes[1]
+    vals = [summ["debias_edge_ipw_within_linear_pp"], summ["debias_edge_ipw_within_gbm_pp"], summ["capacity_gap_pp"]]
+    cols = [POS, NEG, CAP_GREY]
+    labels = ["debiasing\n(within linear)", "debiasing\n(within GBM)", "model CAPACITY\n(GBM>LR — NOT debiasing)"]
+    bars = ax.bar(labels, vals, color=cols, edgecolor="white", width=0.66, zorder=3,
+                  yerr=[sd_lin / np.sqrt(summ["n_seeds"]), sd_gbm / np.sqrt(summ["n_seeds"]), 0],
+                  error_kw={"ecolor": INK, "capsize": 4, "lw": 1})
+    bars[2].set_hatch("//")
+    ax.axhline(0, color=INK, lw=1)
+    for b, v in zip(bars, vals):
+        ax.text(b.get_x() + b.get_width() / 2, v + (1.0 if v >= 0 else -1.0), f"{v:+.1f}pp",
+                ha="center", va="bottom" if v >= 0 else "top", fontsize=11, fontweight="bold")
+    ax.set_ylabel("mean edge (pp of decision-value regret)")
+    ax.set_title("Honest decomposition: most of the apparent edge\nis model capacity, not debiasing",
+                 fontsize=10.5, fontweight="bold")
+    ax.text(0.5, -0.30, "real-world anchor — iPinYou fair split: robust vs LR, NOT robust vs LGB (I²=0.82)",
+            transform=ax.transAxes, ha="center", fontsize=9, color=ANCHOR_PURPLE, style="italic")
+    fig.suptitle("WHEN does win-selection-bias debiasing improve the bid? — within-capacity phase diagram",
                  fontsize=13, fontweight="bold", y=1.02)
     _save(fig, "fig_phase_diagram.png")
 
@@ -67,9 +76,9 @@ def fig_phase_diagram():
 def fig_recal_trap():
     d = json.load(open(WIT / "recal_trap.json"))["cases"]["linear_strong"]
     models = ["biased", "biased_recal", "debiased"]
-    labels = ["biased\n(winners-only)", "biased\n+ recalibration", "debiased\n(DR)"]
+    labels = ["biased\n(winners-only)", "+ recalibration", "debiased\n(IPW)"]
     cols = [MUTE, NEG, POS]
-    fig, axes = plt.subplots(1, 3, figsize=(13, 4.6))
+    fig, axes = plt.subplots(1, 3, figsize=(13.5, 4.7))
     for ax, key, ttl, fmt in [
         (axes[0], "mean_bid", "Mean bid  (recal inflates the bid)", lambda v: f"{v:.0f}"),
         (axes[1], "unprofitable_win_share", "Share of wins that are UNPROFITABLE\n(true value < clearing price)", lambda v: f"{v:.0%}"),
@@ -87,7 +96,8 @@ def fig_recal_trap():
             ax.text(2.4, d["oracle_surplus"], f" oracle {d['oracle_surplus']/1e6:.1f}M", color=ANCHOR_PURPLE,
                     fontsize=8.5, va="bottom", ha="right")
     fig.suptitle("The recalibration trap — naive recalibration over-bids marginal inventory "
-                 "(strong selection, linear baseline)", fontsize=12, fontweight="bold", y=1.03)
+                 "(strong selection, linear baseline; debiaser = IPW at same capacity)",
+                 fontsize=11.5, fontweight="bold", y=1.03)
     _save(fig, "fig_recal_trap.png")
 
 

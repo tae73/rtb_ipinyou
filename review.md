@@ -2,6 +2,12 @@
 
 `refute-by-default`. 이 노트는 주장을 띄우지 않고 *깎는다*.
 
+> **0. Direction-correction (정직 기록).** 초기 버전은 "디바이어싱 edge **+24.2pp** vs linear"를 헤드라인으로
+> 썼다. 이는 **용량과 디바이어싱의 confound**였다(debiaser=GBM, baseline=linear → "GBM이 LR을 이김"이 섞임).
+> 적대 리뷰에서 적발 → **within-capacity**(같은 모델 클래스 안에서 biased vs debiased)로 교정. 정직한 수치:
+> IPW **+4.4pp**(linear, 강한 selection에서 +15.4pp) / **−1.9pp**(GBM); 용량 gap **+26.3pp**는 별도 보고
+> (디바이어싱 아님). 또 진짜 **DR**을 구현했더니 이 testbed에선 **IPW를 못 이김**(−2.6pp) — 숨기지 않고 보고.
+
 ## 1. What is (and is NOT) the contribution
 
 - **NOT a method.** win-tower-as-propensity, ESMM/ESCM² IPW/DR, "debiasing이 입찰을 돕는다"는 전부
@@ -33,18 +39,25 @@
 
 ## 4. Unique wedge (방어 가능한 단 하나)
 
-**competitor-model-strength 축.** 어떤 선행도 "디바이어싱의 *입찰* 가치 ↔ 경쟁 모델 강도"를 plot하지 않았고,
-우리는 그 **음성 절반을 실제 데이터(iPinYou: robust vs LR, NOT vs LGB, I²=0.82)** 로, **양성 절반을 통제
-testbed**로 동시에 갖는다. 이 비대칭의 재현+설명이 wedge다.
+**within-capacity competitor-model-strength 축.** 어떤 선행도 "디바이어싱의 *입찰* 가치 ↔ 경쟁 모델 강도"를,
+**용량을 통제한 채** plot하지 않았다. 우리는 그 **음성 절반을 실제 데이터(iPinYou: robust vs LR, NOT vs LGB,
+I²=0.82)** 로, **양성 절반을 통제 testbed(within-capacity IPW +4.4pp linear vs −1.9pp GBM)** 로 갖는다.
+**부호가 같음**을 보일 뿐 메커니즘 동일은 주장하지 않는다(실제는 광고주 이질성, 합성은 capacity-saturation).
+wedge의 정직함 = 큰 겉보기 숫자(+26.3pp)가 디바이어싱이 아니라 **용량**임을 figure에서 분리해 보이는 것.
 
 ## 5. Limitations (정직)
+- **capacity confound (교정 완료, §0).** 초기 +24.2pp는 용량 혼동 → within-capacity로 교정, 용량 gap 별도 명시.
 - semi-synthetic. DGP·시장모델·전략 선택이 결과를 좌우 — 일반화는 phase diagram의 *경계*에 한정.
+- within-capacity 디바이어싱 효과는 **작다**(linear +4.4pp 평균; 약한 selection에선 ~0/음수). 강한 selection에서만 큼.
 - recalibration-trap은 **strong-selection / weak-baseline**에서 강하고, 강한 GBM baseline에선 약함 — 보편 법칙 아님.
+- recalibration이 global cross-fit isotonic이라 off-support 외삽 약점 포함 — shift-aware baseline은 미탐색(§6).
 - truthful 2nd-price 중심. 다른 전략/예산 제약에서 부호가 달라질 수 있음(probe에서 관측됨) — 미탐색 축.
-- 디바이어싱은 *강한 GBM*을 못 이긴다 — 이건 결함이 아니라 **결과의 일부**(정직 보고).
+- 디바이어싱은 *강한 GBM*을 못 이기고, 진짜 **DR도 IPW를 못 이김** — 결함이 아니라 **결과의 일부**(정직 보고).
 
 ## 6. Path to a full result (현재는 워크숍/숏 수준)
 - **ESCM²-WC neural anchor**(GPU): 합성 phase diagram이 실제 신경망 디바이어로도 유지되는지.
+- **shift-aware calibration baseline**: C2를 "naive isotonic이 나쁨"이 아니라 "shift를 무시한 recal이 나쁨"으로
+  격상 (propensity-weighted calibration 대조군).
 - **Open Bandit Dataset(ZOZO)**: logged-propensity 실데이터 OPE sanity anchor (iPinYou는 P1 NO-GO).
 - **small theory**: recalibration이 과입찰하는 조건의 분석적 진술(선택편향 분포 × truthful 임계).
 - **strategy/budget 축** 추가 → phase diagram 완성.

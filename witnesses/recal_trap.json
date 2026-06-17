@@ -1,12 +1,14 @@
 {
   "_meta": {
-    "claim": "Recalibrating a selection-biased pCTR model raises bids -> wins more marginal impressions where true value < clearing price (negative surplus); DR debiasing avoids the blanket level inflation.",
-    "metric": "expected full-inventory 2nd-price surplus; unprofitable = won & true value < price"
+    "claim": "Recalibrating a selection-biased pCTR model raises bids -> wins more marginal impressions where true value < clearing price (negative surplus); IPW debiasing (same capacity) corrects the shape without the blanket level inflation.",
+    "metric": "expected full-inventory 2nd-price surplus; unprofitable = won & true value < price",
+    "debiaser": "IPW (winners-only, win-propensity weighted), fit at the baseline's own model capacity"
   },
   "cases": {
     "linear_strong": {
       "gamma": 1.2,
       "baseline_capacity": "linear",
+      "debiaser": "IPW (linear capacity)",
       "biased": {
         "mean_bid": 137.8,
         "n_wins": 82230,
@@ -24,18 +26,19 @@
         "surplus_from_unprofitable": -2810529.8
       },
       "debiased": {
-        "mean_bid": 135.1,
-        "n_wins": 50630,
-        "won_surplus": 8580358.4,
-        "n_unprofitable_wins": 11096,
-        "unprofitable_win_share": 0.219,
-        "surplus_from_unprofitable": -193075.0
+        "mean_bid": 154.8,
+        "n_wins": 87623,
+        "won_surplus": 5922097.6,
+        "n_unprofitable_wins": 43193,
+        "unprofitable_win_share": 0.493,
+        "surplus_from_unprofitable": -1563970.3
       },
       "oracle_surplus": 9742923.5
     },
     "gbm_strong": {
       "gamma": 1.2,
       "baseline_capacity": "gbm",
+      "debiaser": "IPW (gbm capacity)",
       "biased": {
         "mean_bid": 149.3,
         "n_wins": 50205,
@@ -62,5 +65,21 @@
       },
       "oracle_surplus": 9742923.5
     }
+  },
+  "robustness": {
+    "regime": "linear_strong (\u03b3=1.2, \u03b8=0)",
+    "seeds": [
+      1,
+      2,
+      3,
+      7,
+      42
+    ],
+    "recal_lowers_surplus_frac": "5/5",
+    "ipw_raises_surplus_frac": "5/5",
+    "mean_bid_biased": 141.5,
+    "mean_bid_recal": 201.8,
+    "mean_bid_ipw": 154.1,
+    "recal_bid_inflation_pp": 42.7
   }
 }

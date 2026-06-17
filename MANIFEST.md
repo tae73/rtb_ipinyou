@@ -3,11 +3,15 @@
 정본 수치는 아래 witness JSON뿐. 문서·figure는 거기서 재생성, 직접 수정 금지.
 
 ## Claims → witnesses → figures
-| claim | witness (canonical JSON) | code | figure |
-|---|---|---|---|
-| de-risk GO (debiasing > recalibration on full inventory) | `witnesses/probe_debiasing_bidding_value.json` | `witnesses/probe_debiasing_bidding_value.py` | — |
-| **C1** competitor-strength asymmetry (robust vs LR, not vs GBM) | `witnesses/phase_diagram.json` | `witnesses/phase_diagram.py` | `witnesses/figures/fig_phase_diagram.png` |
-| **C2** recalibration trap (over-bids marginal inventory) | `witnesses/recal_trap.json` | `witnesses/recal_trap.py` | `witnesses/figures/fig_recal_trap.png` |
+| claim | headline (canonical) | witness (canonical JSON) | code | figure |
+|---|---|---|---|---|
+| de-risk GO (debiasing > recalibration on full inventory) | GO | `witnesses/probe_debiasing_bidding_value.json` | `witnesses/probe_debiasing_bidding_value.py` | — |
+| **C1** within-capacity competitor-strength asymmetry | IPW +4.4pp vs weak / −1.9pp vs strong; capacity gap +26.3pp separate; DR −2.6pp (lost to IPW) | `witnesses/phase_diagram.json` | `witnesses/phase_diagram.py` | `witnesses/figures/fig_phase_diagram.png` |
+| **C2** recalibration trap (over-bids marginal inventory) | surplus 4.31M→3.26M (recal) vs 5.92M (IPW); 5/5 seeds | `witnesses/recal_trap.json` | `witnesses/recal_trap.py` | `witnesses/figures/fig_recal_trap.png` |
+
+> **Edge is WITHIN-CAPACITY** (regret(biased) − regret(debiased) at the same model class). `capacity_gap_pp`
+> in the JSON is the GBM>LR model-class effect, reported separately — it is **not** debiasing. Primary
+> debiaser = IPW; DR is reported as an honest negative (it did not beat IPW here).
 
 ## Documents
 | file | role |
