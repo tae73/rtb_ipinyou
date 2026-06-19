@@ -1,0 +1,1136 @@
+{
+  "_meta": {
+    "design": "iPinYou-GROUNDED semi-synthetic: REAL features + p*(x) fit to REAL winner clicks (base rate rescaled) + market lognormal fit to REAL winner payprices; selection synthesized.",
+    "honest": "p*(x) is a FITTED surrogate (real-feature shape, rescaled base rate), NOT real CTR; decision-value is unmeasurable on real iPinYou (data ceiling) so the testbed stays semi-synthetic.",
+    "real_data": "data/ipinyou/prediction/features/train.parquet (90.6M rows)",
+    "n_pool": 800000,
+    "n_pstar_fit": 3000000,
+    "CPC": 488.88431144257805,
+    "base_rate": 0.0829,
+    "capacities": "linear (LR, one-hot), gbm (LGB native cat), NEURAL (ESCM\u00b2-WC Flax, DR loss + matching biased tower)",
+    "edge_definition": "WITHIN-CAPACITY: regret(biased) \u2212 regret(debiased), same model class",
+    "metric_primary": "truthful 2nd-price decision-value regret (bid = p\u0302\u00b7CPC) \u2014 same as phase_diagram/recal_trap",
+    "metric_secondary": "best-case under OPTIMAL linear bid-shading (bid = \u03b1\u00b7p\u0302\u00b7CPC) \u2014 rewards spread, report alongside truthful, never instead",
+    "finding": "ESCM\u00b2-WC restores the selection-collapsed pCTR spread (ranking) but OVERSHOOTS the level (mean 1.5x, std 1.3x truth) \u2192 under TRUTHFUL bidding it over-bids into NEGATIVE surplus at strong selection (truthful edge -47pp mean); the +23.5pp appears only under optimal shading. At WEAK selection it is well-calibrated and helps truthfully (+7-8pp). Lesson = C2's failure mode from the debiaser itself."
+  },
+  "cells": [
+    {
+      "capacity": "linear",
+      "gamma": 0.4,
+      "seed": 104,
+      "win_rate": 0.5,
+      "regret_biased": 0.748,
+      "regret_debiased": 0.7385,
+      "edge_pp": 0.95,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.051,
+        "std": 0.031
+      },
+      "pctr_debiased": {
+        "mean": 0.071,
+        "std": 0.047
+      },
+      "truthful_regret_biased": 0.756,
+      "truthful_regret_recal": 0.736,
+      "recal_edge_pp": 2.05,
+      "decompose": {
+        "biased": {
+          "mean_bid": 25.0,
+          "won_surplus": 2116733.3,
+          "unprofitable_win_share": 0.456
+        },
+        "recal": {
+          "mean_bid": 25.3,
+          "won_surplus": 2294663.3,
+          "unprofitable_win_share": 0.444
+        },
+        "debiased": {
+          "mean_bid": 34.5,
+          "won_surplus": 2185680.8,
+          "unprofitable_win_share": 0.548
+        },
+        "oracle_surplus": 8676387.9
+      },
+      "truthful_regret_debiased": 0.748,
+      "truthful_edge_pp": 0.79
+    },
+    {
+      "capacity": "linear",
+      "gamma": 0.4,
+      "seed": 105,
+      "win_rate": 0.5,
+      "regret_biased": 0.749,
+      "regret_debiased": 0.7366,
+      "edge_pp": 1.25,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.051,
+        "std": 0.031
+      },
+      "pctr_debiased": {
+        "mean": 0.07,
+        "std": 0.048
+      },
+      "truthful_regret_biased": 0.758,
+      "truthful_regret_recal": 0.734,
+      "recal_edge_pp": 2.4,
+      "decompose": {
+        "biased": {
+          "mean_bid": 24.7,
+          "won_surplus": 2097063.0,
+          "unprofitable_win_share": 0.454
+        },
+        "recal": {
+          "mean_bid": 25.1,
+          "won_surplus": 2305017.4,
+          "unprofitable_win_share": 0.442
+        },
+        "debiased": {
+          "mean_bid": 34.3,
+          "won_surplus": 2209840.0,
+          "unprofitable_win_share": 0.547
+        },
+        "oracle_surplus": 8656326.0
+      },
+      "truthful_regret_debiased": 0.745,
+      "truthful_edge_pp": 1.33
+    },
+    {
+      "capacity": "linear",
+      "gamma": 0.4,
+      "seed": 106,
+      "win_rate": 0.5,
+      "regret_biased": 0.7499,
+      "regret_debiased": 0.7398,
+      "edge_pp": 1.0,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.051,
+        "std": 0.031
+      },
+      "pctr_debiased": {
+        "mean": 0.071,
+        "std": 0.048
+      },
+      "truthful_regret_biased": 0.757,
+      "truthful_regret_recal": 0.731,
+      "recal_edge_pp": 2.57,
+      "decompose": {
+        "biased": {
+          "mean_bid": 25.0,
+          "won_surplus": 2112844.3,
+          "unprofitable_win_share": 0.456
+        },
+        "recal": {
+          "mean_bid": 25.4,
+          "won_surplus": 2335623.9,
+          "unprofitable_win_share": 0.443
+        },
+        "debiased": {
+          "mean_bid": 34.6,
+          "won_surplus": 2178201.0,
+          "unprofitable_win_share": 0.548
+        },
+        "oracle_surplus": 8683884.9
+      },
+      "truthful_regret_debiased": 0.749,
+      "truthful_edge_pp": 0.78
+    },
+    {
+      "capacity": "linear",
+      "gamma": 0.8,
+      "seed": 108,
+      "win_rate": 0.5,
+      "regret_biased": 0.8207,
+      "regret_debiased": 0.8115,
+      "edge_pp": 0.92,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.036,
+        "std": 0.018
+      },
+      "pctr_debiased": {
+        "mean": 0.052,
+        "std": 0.031
+      },
+      "truthful_regret_biased": 0.821,
+      "truthful_regret_recal": 0.804,
+      "recal_edge_pp": 1.71,
+      "decompose": {
+        "biased": {
+          "mean_bid": 17.7,
+          "won_surplus": 610019.7,
+          "unprofitable_win_share": 0.406
+        },
+        "recal": {
+          "mean_bid": 18.1,
+          "won_surplus": 668370.3,
+          "unprofitable_win_share": 0.398
+        },
+        "debiased": {
+          "mean_bid": 25.7,
+          "won_surplus": 477802.1,
+          "unprofitable_win_share": 0.53
+        },
+        "oracle_surplus": 3403144.1
+      },
+      "truthful_regret_debiased": 0.86,
+      "truthful_edge_pp": -3.86
+    },
+    {
+      "capacity": "linear",
+      "gamma": 0.8,
+      "seed": 109,
+      "win_rate": 0.5,
+      "regret_biased": 0.8187,
+      "regret_debiased": 0.8067,
+      "edge_pp": 1.2,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.037,
+        "std": 0.018
+      },
+      "pctr_debiased": {
+        "mean": 0.053,
+        "std": 0.032
+      },
+      "truthful_regret_biased": 0.819,
+      "truthful_regret_recal": 0.802,
+      "recal_edge_pp": 1.68,
+      "decompose": {
+        "biased": {
+          "mean_bid": 18.0,
+          "won_surplus": 613049.2,
+          "unprofitable_win_share": 0.409
+        },
+        "recal": {
+          "mean_bid": 18.3,
+          "won_surplus": 669792.6,
+          "unprofitable_win_share": 0.401
+        },
+        "debiased": {
+          "mean_bid": 25.9,
+          "won_surplus": 474392.4,
+          "unprofitable_win_share": 0.528
+        },
+        "oracle_surplus": 3381213.6
+      },
+      "truthful_regret_debiased": 0.86,
+      "truthful_edge_pp": -4.07
+    },
+    {
+      "capacity": "linear",
+      "gamma": 0.8,
+      "seed": 110,
+      "win_rate": 0.5,
+      "regret_biased": 0.8238,
+      "regret_debiased": 0.8125,
+      "edge_pp": 1.12,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.037,
+        "std": 0.018
+      },
+      "pctr_debiased": {
+        "mean": 0.053,
+        "std": 0.032
+      },
+      "truthful_regret_biased": 0.824,
+      "truthful_regret_recal": 0.81,
+      "recal_edge_pp": 1.4,
+      "decompose": {
+        "biased": {
+          "mean_bid": 17.9,
+          "won_surplus": 603399.3,
+          "unprofitable_win_share": 0.411
+        },
+        "recal": {
+          "mean_bid": 18.2,
+          "won_surplus": 651241.0,
+          "unprofitable_win_share": 0.404
+        },
+        "debiased": {
+          "mean_bid": 26.0,
+          "won_surplus": 453775.0,
+          "unprofitable_win_share": 0.533
+        },
+        "oracle_surplus": 3423607.8
+      },
+      "truthful_regret_debiased": 0.867,
+      "truthful_edge_pp": -4.35
+    },
+    {
+      "capacity": "linear",
+      "gamma": 1.2,
+      "seed": 112,
+      "win_rate": 0.5,
+      "regret_biased": 0.7205,
+      "regret_debiased": 0.7198,
+      "edge_pp": 0.07,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.03,
+        "std": 0.012
+      },
+      "pctr_debiased": {
+        "mean": 0.042,
+        "std": 0.02
+      },
+      "truthful_regret_biased": 0.722,
+      "truthful_regret_recal": 0.716,
+      "recal_edge_pp": 0.66,
+      "decompose": {
+        "biased": {
+          "mean_bid": 14.8,
+          "won_surplus": 388047.3,
+          "unprofitable_win_share": 0.343
+        },
+        "recal": {
+          "mean_bid": 15.1,
+          "won_surplus": 397269.0,
+          "unprofitable_win_share": 0.342
+        },
+        "debiased": {
+          "mean_bid": 20.5,
+          "won_surplus": 239346.2,
+          "unprofitable_win_share": 0.473
+        },
+        "oracle_surplus": 1397897.8
+      },
+      "truthful_regret_debiased": 0.829,
+      "truthful_edge_pp": -10.68
+    },
+    {
+      "capacity": "linear",
+      "gamma": 1.2,
+      "seed": 113,
+      "win_rate": 0.5,
+      "regret_biased": 0.7153,
+      "regret_debiased": 0.714,
+      "edge_pp": 0.14,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.031,
+        "std": 0.013
+      },
+      "pctr_debiased": {
+        "mean": 0.043,
+        "std": 0.023
+      },
+      "truthful_regret_biased": 0.718,
+      "truthful_regret_recal": 0.71,
+      "recal_edge_pp": 0.8,
+      "decompose": {
+        "biased": {
+          "mean_bid": 14.9,
+          "won_surplus": 395779.8,
+          "unprofitable_win_share": 0.342
+        },
+        "recal": {
+          "mean_bid": 15.2,
+          "won_surplus": 407048.7,
+          "unprofitable_win_share": 0.339
+        },
+        "debiased": {
+          "mean_bid": 21.2,
+          "won_surplus": 232096.6,
+          "unprofitable_win_share": 0.475
+        },
+        "oracle_surplus": 1403226.0
+      },
+      "truthful_regret_debiased": 0.835,
+      "truthful_edge_pp": -11.66
+    },
+    {
+      "capacity": "linear",
+      "gamma": 1.2,
+      "seed": 114,
+      "win_rate": 0.5,
+      "regret_biased": 0.7202,
+      "regret_debiased": 0.7202,
+      "edge_pp": -0.0,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.031,
+        "std": 0.013
+      },
+      "pctr_debiased": {
+        "mean": 0.043,
+        "std": 0.023
+      },
+      "truthful_regret_biased": 0.723,
+      "truthful_regret_recal": 0.713,
+      "recal_edge_pp": 0.96,
+      "decompose": {
+        "biased": {
+          "mean_bid": 15.0,
+          "won_surplus": 388905.1,
+          "unprofitable_win_share": 0.35
+        },
+        "recal": {
+          "mean_bid": 15.3,
+          "won_surplus": 402418.6,
+          "unprofitable_win_share": 0.347
+        },
+        "debiased": {
+          "mean_bid": 21.1,
+          "won_surplus": 234556.8,
+          "unprofitable_win_share": 0.477
+        },
+        "oracle_surplus": 1404012.0
+      },
+      "truthful_regret_debiased": 0.833,
+      "truthful_edge_pp": -10.99
+    },
+    {
+      "capacity": "gbm",
+      "gamma": 0.4,
+      "seed": 104,
+      "win_rate": 0.5,
+      "regret_biased": 0.1809,
+      "regret_debiased": 0.1614,
+      "edge_pp": 1.95,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.072,
+        "std": 0.115
+      },
+      "pctr_debiased": {
+        "mean": 0.076,
+        "std": 0.129
+      },
+      "truthful_regret_biased": 0.186,
+      "truthful_regret_recal": 0.18,
+      "recal_edge_pp": 0.63,
+      "decompose": {
+        "biased": {
+          "mean_bid": 35.3,
+          "won_surplus": 7063260.7,
+          "unprofitable_win_share": 0.226
+        },
+        "recal": {
+          "mean_bid": 39.1,
+          "won_surplus": 7117505.5,
+          "unprofitable_win_share": 0.24
+        },
+        "debiased": {
+          "mean_bid": 37.3,
+          "won_surplus": 7264289.2,
+          "unprofitable_win_share": 0.224
+        },
+        "oracle_surplus": 8676387.9
+      },
+      "truthful_regret_debiased": 0.163,
+      "truthful_edge_pp": 2.32
+    },
+    {
+      "capacity": "gbm",
+      "gamma": 0.4,
+      "seed": 105,
+      "win_rate": 0.5,
+      "regret_biased": 0.1742,
+      "regret_debiased": 0.1617,
+      "edge_pp": 1.26,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.072,
+        "std": 0.117
+      },
+      "pctr_debiased": {
+        "mean": 0.076,
+        "std": 0.13
+      },
+      "truthful_regret_biased": 0.18,
+      "truthful_regret_recal": 0.173,
+      "recal_edge_pp": 0.74,
+      "decompose": {
+        "biased": {
+          "mean_bid": 35.2,
+          "won_surplus": 7097765.5,
+          "unprofitable_win_share": 0.214
+        },
+        "recal": {
+          "mean_bid": 38.8,
+          "won_surplus": 7162155.1,
+          "unprofitable_win_share": 0.227
+        },
+        "debiased": {
+          "mean_bid": 37.1,
+          "won_surplus": 7247396.3,
+          "unprofitable_win_share": 0.221
+        },
+        "oracle_surplus": 8656326.0
+      },
+      "truthful_regret_debiased": 0.163,
+      "truthful_edge_pp": 1.72
+    },
+    {
+      "capacity": "gbm",
+      "gamma": 0.4,
+      "seed": 106,
+      "win_rate": 0.5,
+      "regret_biased": 0.1833,
+      "regret_debiased": 0.1657,
+      "edge_pp": 1.75,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.072,
+        "std": 0.117
+      },
+      "pctr_debiased": {
+        "mean": 0.077,
+        "std": 0.13
+      },
+      "truthful_regret_biased": 0.188,
+      "truthful_regret_recal": 0.186,
+      "recal_edge_pp": 0.18,
+      "decompose": {
+        "biased": {
+          "mean_bid": 35.4,
+          "won_surplus": 7049003.5,
+          "unprofitable_win_share": 0.226
+        },
+        "recal": {
+          "mean_bid": 39.2,
+          "won_surplus": 7064409.1,
+          "unprofitable_win_share": 0.242
+        },
+        "debiased": {
+          "mean_bid": 37.5,
+          "won_surplus": 7244698.1,
+          "unprofitable_win_share": 0.23
+        },
+        "oracle_surplus": 8683884.9
+      },
+      "truthful_regret_debiased": 0.166,
+      "truthful_edge_pp": 2.23
+    },
+    {
+      "capacity": "gbm",
+      "gamma": 0.8,
+      "seed": 108,
+      "win_rate": 0.5,
+      "regret_biased": 0.4883,
+      "regret_debiased": 0.4774,
+      "edge_pp": 1.09,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.055,
+        "std": 0.078
+      },
+      "pctr_debiased": {
+        "mean": 0.061,
+        "std": 0.097
+      },
+      "truthful_regret_biased": 0.496,
+      "truthful_regret_recal": 0.536,
+      "recal_edge_pp": -4.1,
+      "decompose": {
+        "biased": {
+          "mean_bid": 27.1,
+          "won_surplus": 1716859.5,
+          "unprofitable_win_share": 0.295
+        },
+        "recal": {
+          "mean_bid": 34.9,
+          "won_surplus": 1577401.3,
+          "unprofitable_win_share": 0.352
+        },
+        "debiased": {
+          "mean_bid": 30.0,
+          "won_surplus": 1778513.6,
+          "unprofitable_win_share": 0.304
+        },
+        "oracle_surplus": 3403144.1
+      },
+      "truthful_regret_debiased": 0.477,
+      "truthful_edge_pp": 1.86
+    },
+    {
+      "capacity": "gbm",
+      "gamma": 0.8,
+      "seed": 109,
+      "win_rate": 0.5,
+      "regret_biased": 0.485,
+      "regret_debiased": 0.47,
+      "edge_pp": 1.51,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.056,
+        "std": 0.074
+      },
+      "pctr_debiased": {
+        "mean": 0.062,
+        "std": 0.096
+      },
+      "truthful_regret_biased": 0.489,
+      "truthful_regret_recal": 0.538,
+      "recal_edge_pp": -4.94,
+      "decompose": {
+        "biased": {
+          "mean_bid": 27.2,
+          "won_surplus": 1728547.1,
+          "unprofitable_win_share": 0.292
+        },
+        "recal": {
+          "mean_bid": 35.2,
+          "won_surplus": 1561517.1,
+          "unprofitable_win_share": 0.355
+        },
+        "debiased": {
+          "mean_bid": 30.2,
+          "won_surplus": 1792205.6,
+          "unprofitable_win_share": 0.299
+        },
+        "oracle_surplus": 3381213.6
+      },
+      "truthful_regret_debiased": 0.47,
+      "truthful_edge_pp": 1.9
+    },
+    {
+      "capacity": "gbm",
+      "gamma": 0.8,
+      "seed": 110,
+      "win_rate": 0.5,
+      "regret_biased": 0.4682,
+      "regret_debiased": 0.4655,
+      "edge_pp": 0.27,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.057,
+        "std": 0.079
+      },
+      "pctr_debiased": {
+        "mean": 0.063,
+        "std": 0.099
+      },
+      "truthful_regret_biased": 0.473,
+      "truthful_regret_recal": 0.533,
+      "recal_edge_pp": -6.06,
+      "decompose": {
+        "biased": {
+          "mean_bid": 27.8,
+          "won_surplus": 1805807.1,
+          "unprofitable_win_share": 0.293
+        },
+        "recal": {
+          "mean_bid": 36.1,
+          "won_surplus": 1598340.8,
+          "unprofitable_win_share": 0.352
+        },
+        "debiased": {
+          "mean_bid": 30.8,
+          "won_surplus": 1825838.5,
+          "unprofitable_win_share": 0.308
+        },
+        "oracle_surplus": 3423607.8
+      },
+      "truthful_regret_debiased": 0.467,
+      "truthful_edge_pp": 0.63
+    },
+    {
+      "capacity": "gbm",
+      "gamma": 1.2,
+      "seed": 112,
+      "win_rate": 0.5,
+      "regret_biased": 0.6713,
+      "regret_debiased": 0.711,
+      "edge_pp": -3.96,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.044,
+        "std": 0.049
+      },
+      "pctr_debiased": {
+        "mean": 0.048,
+        "std": 0.065
+      },
+      "truthful_regret_biased": 0.68,
+      "truthful_regret_recal": 1.044,
+      "recal_edge_pp": -36.4,
+      "decompose": {
+        "biased": {
+          "mean_bid": 21.3,
+          "won_surplus": 447672.1,
+          "unprofitable_win_share": 0.318
+        },
+        "recal": {
+          "mean_bid": 28.9,
+          "won_surplus": -61098.3,
+          "unprofitable_win_share": 0.417
+        },
+        "debiased": {
+          "mean_bid": 23.3,
+          "won_surplus": 324522.7,
+          "unprofitable_win_share": 0.341
+        },
+        "oracle_surplus": 1397897.8
+      },
+      "truthful_regret_debiased": 0.768,
+      "truthful_edge_pp": -8.78
+    },
+    {
+      "capacity": "gbm",
+      "gamma": 1.2,
+      "seed": 113,
+      "win_rate": 0.5,
+      "regret_biased": 0.6582,
+      "regret_debiased": 0.6834,
+      "edge_pp": -2.51,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.045,
+        "std": 0.053
+      },
+      "pctr_debiased": {
+        "mean": 0.052,
+        "std": 0.077
+      },
+      "truthful_regret_biased": 0.671,
+      "truthful_regret_recal": 1.062,
+      "recal_edge_pp": -39.08,
+      "decompose": {
+        "biased": {
+          "mean_bid": 22.0,
+          "won_surplus": 461712.2,
+          "unprofitable_win_share": 0.312
+        },
+        "recal": {
+          "mean_bid": 30.0,
+          "won_surplus": -86703.9,
+          "unprofitable_win_share": 0.418
+        },
+        "debiased": {
+          "mean_bid": 25.3,
+          "won_surplus": 343814.2,
+          "unprofitable_win_share": 0.328
+        },
+        "oracle_surplus": 1403226.0
+      },
+      "truthful_regret_debiased": 0.755,
+      "truthful_edge_pp": -8.4
+    },
+    {
+      "capacity": "gbm",
+      "gamma": 1.2,
+      "seed": 114,
+      "win_rate": 0.5,
+      "regret_biased": 0.6457,
+      "regret_debiased": 0.6734,
+      "edge_pp": -2.77,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.046,
+        "std": 0.056
+      },
+      "pctr_debiased": {
+        "mean": 0.051,
+        "std": 0.076
+      },
+      "truthful_regret_biased": 0.657,
+      "truthful_regret_recal": 1.053,
+      "recal_edge_pp": -39.54,
+      "decompose": {
+        "biased": {
+          "mean_bid": 22.3,
+          "won_surplus": 481365.1,
+          "unprofitable_win_share": 0.317
+        },
+        "recal": {
+          "mean_bid": 31.0,
+          "won_surplus": -73765.3,
+          "unprofitable_win_share": 0.421
+        },
+        "debiased": {
+          "mean_bid": 25.0,
+          "won_surplus": 374350.7,
+          "unprofitable_win_share": 0.335
+        },
+        "oracle_surplus": 1404012.0
+      },
+      "truthful_regret_debiased": 0.733,
+      "truthful_edge_pp": -7.64
+    },
+    {
+      "capacity": "neural",
+      "gamma": 0.4,
+      "seed": 104,
+      "win_rate": 0.5,
+      "regret_biased": 0.2833,
+      "regret_debiased": 0.1495,
+      "edge_pp": 13.38,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.063,
+        "std": 0.086
+      },
+      "pctr_debiased": {
+        "mean": 0.116,
+        "std": 0.175
+      },
+      "truthful_regret_biased": 0.312,
+      "truthful_regret_recal": 0.279,
+      "recal_edge_pp": 3.32,
+      "decompose": {
+        "biased": {
+          "mean_bid": 30.8,
+          "won_surplus": 5970862.5,
+          "unprofitable_win_share": 0.266
+        },
+        "recal": {
+          "mean_bid": 33.6,
+          "won_surplus": 6259139.5,
+          "unprofitable_win_share": 0.269
+        },
+        "debiased": {
+          "mean_bid": 56.7,
+          "won_surplus": 6682908.3,
+          "unprofitable_win_share": 0.43
+        },
+        "oracle_surplus": 8676387.9
+      },
+      "truthful_regret_debiased": 0.23,
+      "truthful_edge_pp": 8.22
+    },
+    {
+      "capacity": "neural",
+      "gamma": 0.4,
+      "seed": 105,
+      "win_rate": 0.5,
+      "regret_biased": 0.2682,
+      "regret_debiased": 0.1367,
+      "edge_pp": 13.16,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.061,
+        "std": 0.082
+      },
+      "pctr_debiased": {
+        "mean": 0.12,
+        "std": 0.178
+      },
+      "truthful_regret_biased": 0.307,
+      "truthful_regret_recal": 0.255,
+      "recal_edge_pp": 5.14,
+      "decompose": {
+        "biased": {
+          "mean_bid": 29.9,
+          "won_surplus": 5999548.5,
+          "unprofitable_win_share": 0.246
+        },
+        "recal": {
+          "mean_bid": 34.2,
+          "won_surplus": 6444704.5,
+          "unprofitable_win_share": 0.249
+        },
+        "debiased": {
+          "mean_bid": 58.8,
+          "won_surplus": 6625853.8,
+          "unprofitable_win_share": 0.448
+        },
+        "oracle_surplus": 8656326.0
+      },
+      "truthful_regret_debiased": 0.235,
+      "truthful_edge_pp": 7.24
+    },
+    {
+      "capacity": "neural",
+      "gamma": 0.8,
+      "seed": 108,
+      "win_rate": 0.5,
+      "regret_biased": 0.5998,
+      "regret_debiased": 0.2778,
+      "edge_pp": 32.2,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.044,
+        "std": 0.048
+      },
+      "pctr_debiased": {
+        "mean": 0.143,
+        "std": 0.202
+      },
+      "truthful_regret_biased": 0.619,
+      "truthful_regret_recal": 0.581,
+      "recal_edge_pp": 3.82,
+      "decompose": {
+        "biased": {
+          "mean_bid": 21.6,
+          "won_surplus": 1296089.7,
+          "unprofitable_win_share": 0.284
+        },
+        "recal": {
+          "mean_bid": 25.1,
+          "won_surplus": 1426006.8,
+          "unprofitable_win_share": 0.321
+        },
+        "debiased": {
+          "mean_bid": 69.8,
+          "won_surplus": -239112.4,
+          "unprofitable_win_share": 0.591
+        },
+        "oracle_surplus": 3403144.1
+      },
+      "truthful_regret_debiased": 1.07,
+      "truthful_edge_pp": -45.13
+    },
+    {
+      "capacity": "neural",
+      "gamma": 0.8,
+      "seed": 109,
+      "win_rate": 0.5,
+      "regret_biased": 0.6195,
+      "regret_debiased": 0.2547,
+      "edge_pp": 36.48,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.049,
+        "std": 0.048
+      },
+      "pctr_debiased": {
+        "mean": 0.127,
+        "std": 0.197
+      },
+      "truthful_regret_biased": 0.619,
+      "truthful_regret_recal": 0.578,
+      "recal_edge_pp": 4.1,
+      "decompose": {
+        "biased": {
+          "mean_bid": 24.1,
+          "won_surplus": 1286610.2,
+          "unprofitable_win_share": 0.344
+        },
+        "recal": {
+          "mean_bid": 25.3,
+          "won_surplus": 1425322.5,
+          "unprofitable_win_share": 0.323
+        },
+        "debiased": {
+          "mean_bid": 62.1,
+          "won_surplus": 837071.7,
+          "unprofitable_win_share": 0.515
+        },
+        "oracle_surplus": 3381213.6
+      },
+      "truthful_regret_debiased": 0.752,
+      "truthful_edge_pp": -13.34
+    },
+    {
+      "capacity": "neural",
+      "gamma": 1.2,
+      "seed": 112,
+      "win_rate": 0.5,
+      "regret_biased": 0.6289,
+      "regret_debiased": 0.4165,
+      "edge_pp": 21.24,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.039,
+        "std": 0.035
+      },
+      "pctr_debiased": {
+        "mean": 0.126,
+        "std": 0.217
+      },
+      "truthful_regret_biased": 0.633,
+      "truthful_regret_recal": 0.637,
+      "recal_edge_pp": -0.37,
+      "decompose": {
+        "biased": {
+          "mean_bid": 19.2,
+          "won_surplus": 512819.5,
+          "unprofitable_win_share": 0.304
+        },
+        "recal": {
+          "mean_bid": 20.4,
+          "won_surplus": 507601.2,
+          "unprofitable_win_share": 0.312
+        },
+        "debiased": {
+          "mean_bid": 61.8,
+          "won_surplus": -1061755.9,
+          "unprofitable_win_share": 0.489
+        },
+        "oracle_surplus": 1397897.8
+      },
+      "truthful_regret_debiased": 1.76,
+      "truthful_edge_pp": -112.65
+    },
+    {
+      "capacity": "neural",
+      "gamma": 1.2,
+      "seed": 113,
+      "win_rate": 0.5,
+      "regret_biased": 0.6364,
+      "regret_debiased": 0.3901,
+      "edge_pp": 24.63,
+      "pctr_true": {
+        "mean": 0.083,
+        "std": 0.153
+      },
+      "pctr_biased": {
+        "mean": 0.043,
+        "std": 0.037
+      },
+      "pctr_debiased": {
+        "mean": 0.13,
+        "std": 0.216
+      },
+      "truthful_regret_biased": 0.663,
+      "truthful_regret_recal": 0.656,
+      "recal_edge_pp": 0.73,
+      "decompose": {
+        "biased": {
+          "mean_bid": 20.9,
+          "won_surplus": 472233.4,
+          "unprofitable_win_share": 0.35
+        },
+        "recal": {
+          "mean_bid": 20.7,
+          "won_surplus": 482537.1,
+          "unprofitable_win_share": 0.308
+        },
+        "debiased": {
+          "mean_bid": 63.7,
+          "won_surplus": -1318747.2,
+          "unprofitable_win_share": 0.527
+        },
+        "oracle_surplus": 1403226.0
+      },
+      "truthful_regret_debiased": 1.94,
+      "truthful_edge_pp": -127.68
+    }
+  ],
+  "summary": {
+    "shaded_edge_linear_pp": 0.74,
+    "shaded_edge_gbm_pp": -0.16,
+    "shaded_edge_neural_pp": 23.52,
+    "truthful_edge_linear_pp": -4.75,
+    "truthful_edge_gbm_pp": -1.57,
+    "truthful_edge_neural_pp": -47.22,
+    "recal_edge_linear_pp": 1.58,
+    "recal_edge_gbm_pp": -14.29,
+    "recal_edge_neural_pp": 2.79,
+    "shaded_edge_neural_by_gamma": {
+      "0.4": 13.27,
+      "0.8": 34.34,
+      "1.2": 22.93
+    },
+    "truthful_edge_neural_by_gamma": {
+      "0.4": 7.73,
+      "0.8": -29.23,
+      "1.2": -120.17
+    },
+    "edge_by_gamma": {
+      "linear": {
+        "0.4": 1.07,
+        "0.8": 1.08,
+        "1.2": 0.07
+      },
+      "gbm": {
+        "0.4": 1.65,
+        "0.8": 0.96,
+        "1.2": -3.08
+      },
+      "neural": {
+        "0.4": 13.27,
+        "0.8": 34.34,
+        "1.2": 22.93
+      }
+    },
+    "pctr_recovery_neural": {
+      "true_mean": 0.083,
+      "biased_mean": 0.05,
+      "debiased_mean": 0.127,
+      "true_std": 0.153,
+      "biased_std": 0.056,
+      "debiased_std": 0.198
+    },
+    "capacity_gap_linear_to_neural_pp": 25.0,
+    "biased_pctr_collapsed": true,
+    "debiasing_restores_spread": true,
+    "debiasing_overshoots_level": true,
+    "shaded_edge_positive_neural": true,
+    "truthful_edge_negative_neural": true,
+    "edge_reverses_by_metric": true,
+    "weak_selection_truthful_help": true,
+    "recal_trap_holds_gbm": true,
+    "recal_trap_holds_neural": false,
+    "base_rate": 0.0829,
+    "market_mu": 3.89,
+    "market_sig": 0.923,
+    "n_pool": 800000,
+    "sk_seeds": 3,
+    "nn_seeds": 2
+  }
+}

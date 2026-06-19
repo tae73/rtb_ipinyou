@@ -89,7 +89,56 @@ GBM (LightGBM ≈ LGB)}**. 각 cap에서:
 맞춤). **Robust:** 5 seeds 모두에서 recal은 surplus를 낮추고(5/5) IPW는 높였으며(5/5), recal 입찰 인플레는
 평균 **+42.7%**. 강한 GBM baseline에선 trap이 약하다(`recal_trap.json:gbm_strong`: recal 8.96M→8.69M) — C1과 일관.
 
-## 6. Honest scope
+## 6. Neural anchor — real iPinYou features + the real ESCM²-WC (a cautionary result)
+
+`witnesses/neural_anchor.py`. Closes the two residual critiques (Gaussian toys; the real neural model
+unused) with an **iPinYou-grounded semi-synthetic**: **real feature vectors** (800K-row subsample of the
+90.6M-row parquet, **29 real features**), ground-truth **p\*(x) = LightGBM fit to REAL winner clicks**
+(real feature→click shape, base rate rescaled to a learnable ~0.08), market **lognormal fit to REAL winner
+payprices** (MU 3.89, SIG 0.92), selection strength γ a knob. Same within-capacity experiment across
+**cap ∈ {linear (LR), gbm (LGB), neural (real ESCM²-WC, Flax, DR loss + a matching-capacity biased tower)}**
+(10 seeds: sklearn 3, neural 2). **Primary metric = truthful 2nd-price surplus** (bid = p̂·CPC, *same as
+phase_diagram/recal_trap*); we ALSO report best-case under **optimal linear bid-shading** (bid = α·p̂·CPC).
+
+> **Adversarial-honesty note.** A first pass headlined a "+23.5 pp neural debiasing edge." An adversarial
+> review caught that this is **metric-specific**: it holds only under optimal shading; under the project's
+> **primary truthful-bid metric the result reverses** (mean **−47 pp** neural). We re-report both. The
+> shading metric is *not* a pure ranking metric — a single global α cannot fix a wrong level, so it
+> **rewards spread** and flatters an over-spread model. So we present this as a **cautionary** finding.
+
+**Mechanism — collapse, then OVERSHOOT** (`summary.pctr_recovery_neural`): win-selection bias **collapses**
+the biased neural pCTR — mean 0.083 → **0.050**, spread (std) 0.153 → **0.056**. The real ESCM²-WC restores
+the spread (std → **0.198**) but **overshoots the level** (mean → **0.127**, ≈1.5× true; std ≈1.3× true) —
+a known DR-pseudo-label + joint-BCE entire-space inflation.
+
+**The metric reversal** (`summary`, neural, by γ):
+
+| metric | mean edge | γ = 0.4 → 0.8 → 1.2 |
+|---|---|---|
+| **truthful bid p̂·CPC** (primary) | **−47.2 pp** | **+7.7** → −29.2 → **−120.2** |
+| optimal bid-shading (best-case) | +23.5 pp | +13.3 → +34.3 → +22.9 |
+
+→ **Honest reading.** At **weak** selection (γ=0.4) the ESCM²-WC is well-calibrated and **genuinely helps
+truthful bidding** (+7.7 pp; won surplus 5.97M → 6.68M). At **strong** selection it **over-bids into
+losses** — debiased truthful won surplus goes **negative** (−1.06M, −1.32M at γ=1.2; unprofitable-win share
+up to 0.59) while biased stays positive. The restored spread only becomes a *gain* under optimal shading,
+which rescales the over-bidding away. **This is the recalibration trap (C2) reappearing from the debiaser
+itself:** a wrong *level* (whether from naive recal or from an over-restoring DR model) → over-bid →
+negative surplus. **Debiasing restores ranking; calibration is still required to bid.** (LR/LGB truthful
+edges are also negative, −4.8/−1.6 pp; LR shaded +0.7, LGB −0.2.)
+
+**C2 — recalibration trap on real features** (`summary`, truthful): reproduces for **GBM** (recal edge
+**−14.3 pp** mean; **−36 to −39 pp** at γ=1.2) but **not** for LR (+1.6) or the neural model (+2.8) — the
+biased neural *under-predicts*, so recalibration raises it toward truth and helps. Capacity-dependent.
+
+<p align="center"><img src="witnesses/figures/fig_neural_anchor.png" width="900"></p>
+
+> Honest: `[sketch·합성검증]` on an iPinYou-GROUNDED semi-synthetic — p\*(x) is a fitted surrogate, market
+> fit to real payprices, selection synthesized; decision-value is unmeasurable on real iPinYou (data
+> ceiling). **Truthful surplus is primary; optimal-shading is best-case and rewards spread — reported
+> alongside, never instead.** Numbers verbatim from `witnesses/neural_anchor.json`.
+
+## 7. Honest scope
 - `[sketch·합성검증]` — semi-synthetic. 결론은 *언제/왜*의 **특성화**이지 새 방법이 아니다.
 - 헤드라인을 capacity-confound에서 **within-capacity**로 교정했고, capacity gap을 명시한다.
 - 음성 영역을 보고한다: 디바이어싱은 강한 GBM을 못 이기고, DR은 IPW를 못 이겼다. 실 iPinYou anchor가 부호를 뒷받침.

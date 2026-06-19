@@ -8,9 +8,12 @@
 > *win-selection-bias 디바이어싱은 **언제** 입찰(decision value)을 바꾸는가 — 그리고 단순 recalibration은 왜
 > full inventory에서 역효과인가?* 통제 가능한 **semi-synthetic testbed**(관측 가능한 lost-inventory)로
 > regime **phase diagram**을 그렸고 wedge는 **competitor-model-strength** 축이다. iPinYou 실결과는 그 *음성 절반*.
-> - **C1**(competitor-strength governs payoff): edge **+24.2pp** vs linear, **−1.9pp** vs GBM — `witnesses/phase_diagram.json`
-> - **C2**(recalibration trap): surplus **4.3M→3.3M**(recal) vs **8.6M**(DR) — `witnesses/recal_trap.json`
-> - 새 front = `README.md`/`README.ko.md` + `concept/methods/review/MANIFEST.md` + `witnesses/` + `repro/`.
+> - **C1**(within-capacity, IPW): edge **+4.4pp** vs linear / **−1.9pp** vs GBM; capacity gap **+26.3pp** 별도(디바이어싱 아님).
+>   *초기 +24.2pp는 capacity confound였고 적대리뷰가 적발→교정.* `witnesses/phase_diagram.json`
+> - **C2**(recalibration trap): surplus **4.3M→3.26M**(recal) vs **5.92M**(IPW), 5/5 robust — `witnesses/recal_trap.json`
+> - **★ Neural anchor**(cautionary, 실 feature + 실 ESCM²-WC): ESCM²-WC가 붕괴 분산 복원하나 레벨 overshoot →
+>   **truthful edge −47pp**(과입찰), +23.5pp는 optimal shading서만. 교훈=디바이어發 C2 trap. `witnesses/neural_anchor.json`
+> - 새 front = `README.md`/`README.ko.md` + `concept/methods/review/MANIFEST.md` + `witnesses/`(+neural_anchor) + `repro/`.
 > - **과거 iPinYou 포트폴리오 전체 → `old/`** (Foundation·실세계 anchor). 아래 로그는 그 foundation의 기록.
 
 ---

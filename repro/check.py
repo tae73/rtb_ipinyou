@@ -40,6 +40,26 @@ def static_checks():
           ls["biased_recal"]["won_surplus"] / 1e6, ls["biased"]["won_surplus"] / 1e6, ls["debiased"]["won_surplus"] / 1e6))
 
 
+def neural_checks():
+    """Neural anchor (iPinYou-grounded semi-synthetic + real ESCM²-WC). Skips gracefully if absent."""
+    p = W / "neural_anchor.json"
+    if not p.exists():
+        print("SKIP neural_anchor — JSON not present"); return
+    s = json.load(open(p))["summary"]
+    rec = s["pctr_recovery_neural"]
+    assert s["biased_pctr_collapsed"] is True, rec               # win-selection collapses the biased neural pCTR
+    assert s["debiasing_restores_spread"] is True, rec           # ESCM²-WC restores the collapsed spread...
+    assert s["debiasing_overshoots_level"] is True, rec          # ...but OVERSHOOTS the level
+    assert s["truthful_edge_negative_neural"] is True, s         # PRIMARY metric: it over-bids into losses
+    assert s["shaded_edge_positive_neural"] is True, s           # +edge only under optimal shading
+    assert s["edge_reverses_by_metric"] is True, s               # the honest headline: shaded + reverses to truthful −
+    assert s["recal_trap_holds_gbm"] is True, s                  # C2 recal-trap reproduces for GBM on real features
+    print("NEURAL GREEN (cautionary) — ESCM²-WC restores collapsed pCTR spread (%.3f→%.3f) but overshoots level "
+          "(mean %.3f→%.3f); TRUTHFUL edge %.1fpp (over-bids) vs SHADED %.1fpp — reverses by metric." % (
+          rec["biased_std"], rec["debiased_std"], rec["true_mean"], rec["debiased_mean"],
+          s["truthful_edge_neural_pp"], s["shaded_edge_neural_pp"]))
+
+
 def live_check():
     """Recompute ONE strong-selection linear cell from scratch (2 seeds) and confirm the within-capacity
     IPW debiasing edge is robustly positive — i.e. the committed JSON reflects a real pipeline output."""
@@ -56,5 +76,6 @@ def live_check():
 
 if __name__ == "__main__":
     static_checks()
+    neural_checks()
     if "--live" in sys.argv:
         live_check()

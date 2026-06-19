@@ -101,11 +101,56 @@ def fig_recal_trap():
     _save(fig, "fig_recal_trap.png")
 
 
+def fig_neural_anchor():
+    p = WIT / "neural_anchor.json"
+    if not p.exists():
+        print("  (skip fig_neural_anchor — neural_anchor.json not found)")
+        return
+    s = json.load(open(p))["summary"]
+    rec = s["pctr_recovery_neural"]
+    gammas = sorted(float(g) for g in s["shaded_edge_neural_by_gamma"])
+    fig, axes = plt.subplots(1, 2, figsize=(13.2, 5.0))
+    # Panel A: pCTR — selection collapses the biased model; ESCM²-WC restores spread but OVERSHOOTS the level
+    ax = axes[0]
+    labels = ["true p*(x)", "biased\n(winners-only)", "debiased\n(ESCM²-WC)"]
+    means = [rec["true_mean"], rec["biased_mean"], rec["debiased_mean"]]
+    stds = [rec["true_std"], rec["biased_std"], rec["debiased_std"]]
+    bars = ax.bar(labels, means, yerr=stds, color=[ANCHOR_PURPLE, NEG, POS], edgecolor="white", width=0.62,
+                  zorder=3, error_kw={"ecolor": INK, "capsize": 5, "lw": 1.2})
+    ax.axhline(rec["true_mean"], ls="--", color=ANCHOR_PURPLE, lw=1, zorder=1)
+    for b, m, sd in zip(bars, means, stds):
+        ax.text(b.get_x() + b.get_width() / 2, m + sd + 0.004, f"{m:.3f}\n±{sd:.3f}", ha="center",
+                va="bottom", fontsize=9.5, fontweight="bold")
+    ax.set_ylabel("predicted pCTR  (mean ± std)")
+    ax.margins(y=0.22)
+    ax.set_title("Selection COLLAPSES the biased pCTR; ESCM²-WC\nrestores spread but OVERSHOOTS the level (mean 1.5× true)",
+                 fontsize=10, fontweight="bold")
+    # Panel B: the metric reversal — shaded edge (best-case) is +, truthful edge (primary) goes NEGATIVE
+    ax = axes[1]
+    sh = [s["shaded_edge_neural_by_gamma"][f"{g:g}"] for g in gammas]
+    tr = [s["truthful_edge_neural_by_gamma"][f"{g:g}"] for g in gammas]
+    ax.plot(gammas, sh, "o-", color=POS, lw=2.4, ms=8, label="optimal bid-shading (best case)")
+    ax.plot(gammas, tr, "s-", color=NEG, lw=2.4, ms=8, label="TRUTHFUL bid p̂·CPC (primary metric)")
+    ax.axhline(0, color=INK, lw=1)
+    ax.fill_between(gammas, tr, 0, where=[t < 0 for t in tr], color=NEG, alpha=0.10)
+    for g, t in zip(gammas, tr):
+        ax.text(g, t - 4, f"{t:+.0f}", ha="center", va="top", fontsize=9, color=NEG, fontweight="bold")
+    ax.set_xlabel("win-selection-bias strength  γ")
+    ax.set_ylabel("neural debiasing edge (pp)")
+    ax.legend(fontsize=9, loc="lower left")
+    ax.set_title("The +edge is SHADING-specific: under truthful bidding the\novershoot over-bids into losses at strong selection",
+                 fontsize=10, fontweight="bold")
+    fig.suptitle("Neural anchor — the real ESCM²-WC restores ranking but is MISCALIBRATED for truthful bidding",
+                 fontsize=12, fontweight="bold", y=1.03)
+    _save(fig, "fig_neural_anchor.png")
+
+
 def main():
     _style()
     print("research figures ->", HERE.relative_to(WIT.parent))
     fig_phase_diagram()
     fig_recal_trap()
+    fig_neural_anchor()
     print("done.")
 
 
