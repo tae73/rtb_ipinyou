@@ -127,22 +127,25 @@ def fig_neural_anchor():
     ax.legend(fontsize=9, loc="lower left")
     ax.set_title("The −47pp over-bidding was a WIRING BUG:\ncensoring click (click·win) fixes it",
                  fontsize=10, fontweight="bold")
-    # Panel B: the intuitive fix (post-hoc calibration) does NOT help — IPW-cal even HURTS at strong selection
+    # Panel B: 2×2 test — does selection-aware IPW calibration beat naive? Only at weak selection (good ESS)
     ax = axes[1]
-    raw = [gk(s["truthful_edge_neural_by_gamma"], g) for g in gammas]
-    ipw = [gk(s["truthful_edge_neural_ipwcal_by_gamma"], g) for g in gammas]
-    nai = [gk(s["truthful_edge_neural_naivecal_by_gamma"], g) for g in gammas]
-    ax.plot(gammas, raw, "o-", color=POS, lw=2.4, ms=8, label="debiased (censored, no cal)")
-    ax.plot(gammas, ipw, "D-", color=GBM_C, lw=2.2, ms=7, label="+ IPW-weighted calibration")
-    ax.plot(gammas, nai, "v-", color=LINEAR_C, lw=2.0, ms=7, label="+ naive calibration")
+    bias_adv = [gk(s["bias_ipw_minus_naive_by_gamma"], g) for g in gammas]
+    ax.plot(gammas, bias_adv, "D-", color=ANCHOR_PURPLE, lw=2.4, ms=8, label="IPW − naive (biased model)")
     ax.axhline(0, color=INK, lw=1)
-    ax.set_xlabel("win-selection-bias strength  γ")
-    ax.set_ylabel("neural TRUTHFUL-bid edge (pp)")
+    ax.fill_between(gammas, bias_adv, 0, where=[v >= 0 for v in bias_adv], color=POS, alpha=0.12)
+    ax.fill_between(gammas, bias_adv, 0, where=[v < 0 for v in bias_adv], color=NEG, alpha=0.12)
+    for g, v in zip(gammas, bias_adv):
+        ax.text(g, v + (0.6 if v >= 0 else -0.6), f"{v:+.1f}", ha="center", va="bottom" if v >= 0 else "top",
+                fontsize=9, fontweight="bold", color=(POS if v >= 0 else NEG))
+    ax.text(0.4, max(bias_adv) * 0.5 + 0.5, "IPW wins\n(good overlap)", ha="center", fontsize=8.5, color=POS)
+    ax.text(gammas[-1], min(bias_adv) * 0.5, "IPW loses\n(ESS↓ → over-bids)", ha="center", fontsize=8.5, color=NEG)
+    ax.set_xlabel("win-selection-bias strength  γ   (ESS 0.87 → 0.72 → 0.63)")
+    ax.set_ylabel("IPW − naive calibration edge (pp)\n>0 = selection-aware better")
     ax.legend(fontsize=9, loc="upper right")
-    ax.set_title("Calibration further helps (+7.5→+11pp avg) —\nbut IPW-cal's gain vanishes at the strongest selection (ESS↓)",
+    ax.set_title("Does selection-aware IPW calibration beat naive?\nOnly at WEAK selection — accuracy ≠ bidding value",
                  fontsize=10, fontweight="bold")
-    fig.suptitle("Neural anchor (corrected) — the over-bidding was a censoring bug; fixed, the ESCM²-WC helps truthfully (+7.5pp)",
-                 fontsize=11.5, fontweight="bold", y=1.03)
+    fig.suptitle("Neural anchor (corrected) — over-bidding was a censoring bug (fixed: +7.2pp); selection-aware calibration is ESS-gated",
+                 fontsize=11, fontweight="bold", y=1.03)
     _save(fig, "fig_neural_anchor.png")
 
 

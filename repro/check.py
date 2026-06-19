@@ -47,17 +47,22 @@ def neural_checks():
         print("SKIP neural_anchor — JSON not present"); return
     s = json.load(open(p))["summary"]
     rec = s["pctr_recovery_neural"]
+    # ROBUST asserts only (n=2 neural seeds + mild p* LGB non-determinism → fine magnitudes wobble; assert signs/mechanism)
     assert s["biased_pctr_collapsed"] is True, rec               # win-selection collapses the biased neural pCTR
     assert s["censoring_fixes_overbidding"] is True, s           # censoring click (click·win) fixes the −47pp over-bidding
     assert s["truthful_edge_neural_pp"] > 0, s                   # corrected: ESCM²-WC genuinely helps truthful bidding
-    assert s["debiased_undershoots_level"] is True, rec         # censored model now under-predicts (no overshoot)
-    assert s["ipw_calibration_helps_truthful"] is True, s       # selection-aware calibration further improves it...
-    assert s["ipw_cal_hurts_strong_selection"] is True, s       # ...but its gain vanishes at the strongest selection
+    assert s["debiased_undershoots_level"] is True, rec         # censored model under-predicts (no overshoot)
+    assert s["ipw_calibration_helps_truthful"] is True, s       # generic calibration further helps (naive ≈ IPW)
     assert s["recal_trap_holds_gbm"] is True, s                 # C2 recal-trap still reproduces for GBM
-    print("NEURAL GREEN (corrected) — censoring click fixes the −47pp over-bidding → neural truthful edge "
-          "%+.1fpp (was %.1f); +IPW-cal %+.1fpp (gain vanishes at strong γ); pCTR mean %.3f→%.3f (no overshoot)." % (
+    # 2×2 calibration test (robust direction): IPW correctly lifts the level toward marginal, but does NOT net-beat naive
+    assert s["ipw_lifts_level_more_than_naive"] is True, s      # mechanism: IPW raises pCTR toward the marginal
+    assert s["ipw_beats_naive_on_biased"] is False, s          # hypothesis refuted net (IPW wins only at weak selection)
+    print("NEURAL GREEN (corrected) — censoring fixes the −47pp over-bidding → neural truthful edge %+.1fpp (was %.1f); "
+          "calibration helps (IPW %+.1f ≈ naive %+.1f); 2×2: IPW lifts level (%.3f vs naive %.3f) but does NOT net-beat "
+          "naive on biased (%+.1fpp; wins only at weak selection)." % (
           s["truthful_edge_neural_pp"], s["frozen_prefix_truthful_edge_neural_pp"],
-          s["truthful_edge_neural_ipwcal_pp"], rec["biased_mean"], rec["debiased_mean"]))
+          s["truthful_edge_neural_ipwcal_pp"], s["truthful_edge_neural_naivecal_pp"],
+          s["pctr_bias_ipwcal_mean"], s["pctr_bias_naivecal_mean"], s["bias_ipw_minus_naive_neural_pp"]))
 
 
 def live_check():

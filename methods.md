@@ -107,29 +107,33 @@ tower; capacities {LR, LGB, neural}; **primary metric = truthful 2nd-price surpl
 > The pre-fix numbers are frozen in `neural_anchor.json:_meta.frozen_prefix_result` for audit.
 
 **The fix — censor click (`click·win`).** The over-bidding disappears. The debiased pCTR no longer
-overshoots (mean 0.083 → **0.065**, a slight *under*-shoot, vs the buggy 0.127), and the **neural truthful
-edge becomes +7.5 pp** (was −47.2), positive across all six cells (by-γ 6.8 / 7.8 / 7.8). It is a genuine
-recovery, not conservative bidding: the debiased model bids **higher** than biased (e.g. 22 → 32) and wins
-**more** surplus in every cell. *Caveat:* only **n=2 neural seeds/γ** (~3 pp seed-to-seed scatter) — trust
-the **sign** (robustly positive; LR/LGB stay −4.8 / −1.6), treat the magnitude as under-powered.
+overshoots (mean 0.083 → **0.064**, a slight *under*-shoot, vs the buggy 0.127), and the **neural truthful
+edge becomes +7.2 pp** (was −47.2), positive in all six cells (by-γ 5.1 / 7.6 / 8.7). It is a genuine
+recovery, not conservative bidding: the debiased model bids **higher** than biased and wins **more** surplus
+in every cell. *Caveat:* only **n=2 neural seeds/γ** and the `p*` LGB fit is mildly non-deterministic
+(~±0.3 pp run-to-run) — **trust the sign/direction; magnitudes are under-powered.**
 
-**Can post-hoc calibration improve it further?** A bit — with an honest twist. Naive isotonic-on-winners
-would *reintroduce* the selection bias (winners are the low-pCTR group), so we use **selection-aware
-IPW-weighted isotonic** (calibrate to the *marginal* via `1/P(win|x)` weights). Result:
+**Can post-hoc calibration improve it further? And does the *selection-aware* IPW variant beat naive?** A
+2×2 test — {biased, debiased} × {naive, IPW-weighted isotonic} (`calibrate_ipw` re-weights winners by
+`1/P(win|x)` toward the marginal; naive does not). Generic calibration helps the debiased model
+(+7.2 → **+11.1** IPW, **+11.2** naive). But the headline question — *does selection-awareness pay?* —
+answers **no, net**, with an instructive regime structure (`summary.bias_ipw_minus_naive_by_gamma`,
+edge = regret(naive) − regret(IPW), >0 ⇒ IPW better):
 
-| neural truthful edge | mean | γ = 0.4 → 0.8 → 1.2 |
-|---|---|---|
-| debiased (censored, no cal) | **+7.5 pp** | +6.8 → +7.8 → +7.8 |
-| + IPW-weighted calibration | **+10.9 pp** | +8.8 → +16.5 → **+7.4** |
-| + naive calibration | +11.0 pp | +8.1 → +15.8 → +9.1 |
+| IPW − naive, on the **biased** model | γ=0.4 (ESS 0.87) | γ=0.8 (0.72) | γ=1.2 (0.63) | mean |
+|---|---|---|---|---|
+| edge (pp) | **+1.2** ✓ | −0.2 | **−6.4** | **−1.8** |
 
-→ Calibration helps **on average** (+7.5 → ~+11 pp), but **the selection-aware advantage of IPW does NOT
-materialize here**: IPW (+10.9) and naive (+11.0) are essentially tied, the gain is **non-monotone** in γ
-(peaks at γ=0.8 then drops), and at the **strongest selection naive even edges IPW** (γ=1.2: 9.1 vs 7.4),
-where overlap degrades (ESS falls with γ — mean 0.74, ~0.63 at γ=1.2). Honest reading: **the censoring fix
-did the heavy lifting; calibration adds a small lift and the principled IPW variant shows no edge over naive
-in this regime.** (Best-case optimal-shading edge is +7.6 pp ≈ the truthful one — no metric reversal now
-that the level is right.)
+→ IPW **does** beat naive at **weak selection / good overlap** (γ=0.4) — and it is doing its job:
+IPW lifts the biased level toward the marginal (0.050 → **0.060** vs naive's **0.054**, true 0.083). But at
+**strong selection / poor overlap** (ESS 0.63) its high-variance weights **over-lift → over-bid → it loses
+to naive** (−6.4 pp). Net, naive ties/slightly wins (biased −1.8; debiased −0.1). **The driver is overlap
+(ESS), not biased-vs-debiased** — which *revises* an earlier guess that IPW≈naive "because the model was
+already debiased." Deeper lesson: a *more accurate* (level-correct) calibration is **not** a better
+*bidding* calibration near the 2nd-price margin — being conservatively under-calibrated is safer. This is
+the recalibration trap (C2) restated at the calibration layer: any level-raising calibration risks
+over-bidding, even the principled selection-aware one. (Best-case optimal-shading edge +7.4 pp ≈ the
+truthful +7.2 — no metric reversal now that the level is right.)
 
 **C2 — recalibration trap on real features** (`summary`, truthful): still reproduces for **GBM** (recal
 edge **−14.2 pp**) but not LR/neural — capacity-dependent, as before.
@@ -137,10 +141,12 @@ edge **−14.2 pp**) but not LR/neural — capacity-dependent, as before.
 <p align="center"><img src="witnesses/figures/fig_neural_anchor.png" width="900"></p>
 
 > Honest: `[sketch·합성검증]` on an iPinYou-GROUNDED semi-synthetic — p\*(x) a fitted surrogate, market fit
-> to real payprices, selection synthesized; decision-value unmeasurable on real iPinYou (data ceiling). The
-> direct answer to "what's the problem / can we fix it": **the over-bidding was largely a data-contract bug,
-> not fundamental miscalibration; fixed, the ESCM²-WC helps (+7.5 pp), and selection-aware calibration adds
-> a bit more (except at extreme selection).** Numbers verbatim from `witnesses/neural_anchor.json`.
+> to real payprices, selection synthesized; decision-value unmeasurable on real iPinYou (data ceiling);
+> n=2 neural seeds + mild p* non-determinism ⇒ trust signs/direction, not magnitudes. Direct answers:
+> **(1)** the over-bidding was a data-contract bug (censoring), not fundamental miscalibration — fixed, the
+> ESCM²-WC helps (+7.2 pp). **(2)** selection-aware IPW calibration beats naive only when overlap is good
+> (weak selection); it loses at strong selection and ties net — calibration *accuracy* ≠ bidding *value*.
+> Numbers verbatim from `witnesses/neural_anchor.json`.
 
 ## 7. Honest scope
 - `[sketch·합성검증]` — semi-synthetic. 결론은 *언제/왜*의 **특성화**이지 새 방법이 아니다.

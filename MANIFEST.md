@@ -8,7 +8,7 @@
 | de-risk GO (debiasing > recalibration on full inventory) | GO | `witnesses/probe_debiasing_bidding_value.json` | `witnesses/probe_debiasing_bidding_value.py` | — |
 | **C1** within-capacity competitor-strength asymmetry | IPW +4.4pp vs weak / −1.9pp vs strong; capacity gap +26.3pp separate; DR −2.6pp (lost to IPW) | `witnesses/phase_diagram.json` | `witnesses/phase_diagram.py` | `witnesses/figures/fig_phase_diagram.png` |
 | **C2** recalibration trap (over-bids marginal inventory) | surplus 4.31M→3.26M (recal) vs 5.92M (IPW); 5/5 seeds | `witnesses/recal_trap.json` | `witnesses/recal_trap.py` | `witnesses/figures/fig_recal_trap.png` |
-| **Neural anchor** — REAL iPinYou features + the REAL ESCM²-WC (Flax) | −47pp over-bidding was a **censoring bug**; fixed (`click·win`) → ESCM²-WC helps truthful bidding **+7.5pp** (+11 w/ selection-aware IPW calibration); pre-fix frozen in `_meta` | `witnesses/neural_anchor.json` | `witnesses/neural_anchor.py` | `witnesses/figures/fig_neural_anchor.png` |
+| **Neural anchor** — REAL iPinYou features + the REAL ESCM²-WC (Flax) | −47pp over-bidding was a **censoring bug**; fixed (`click·win`) → ESCM²-WC helps truthful bidding **+7.2pp** (+11 w/ calibration). 2×2 test: selection-aware IPW beats naive **only at weak selection** (ESS-gated) — *accuracy ≠ bidding value*. pre-fix frozen in `_meta` | `witnesses/neural_anchor.json` | `witnesses/neural_anchor.py` | `witnesses/figures/fig_neural_anchor.png` |
 
 > **Edge is WITHIN-CAPACITY** (regret(biased) − regret(debiased) at the same model class). `capacity_gap_pp`
 > in the JSON is the GBM>LR model-class effect, reported separately — it is **not** debiasing. Primary

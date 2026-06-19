@@ -51,9 +51,11 @@ isn't confused with "a stronger model wins."
   features + the real **ESCM²-WC**), a first pass showed the debiaser **over-bidding** (truthful edge
   **−47 pp**). Investigating *why* revealed it was mostly a **censoring wiring bug** in the testbed
   (uncensored synthetic click fed to a loss that expects censored click). **Fixed (`click·win`), the
-  ESCM²-WC genuinely helps truthful bidding: +7.5 pp** (consistent across γ), and selection-aware **IPW
-  calibration** adds more (**+11 pp**, except at extreme selection). LR/LGB don't benefit (−4.8/−1.6). A
-  2nd self-correction — the over-bidding was a data-contract bug, not fundamental miscalibration.
+  ESCM²-WC genuinely helps truthful bidding: +7.2 pp** (positive across γ), and generic **calibration**
+  adds more (**+11 pp**). A 2×2 test (biased/debiased × naive/IPW) finds the **selection-aware IPW variant
+  beats naive *only* at weak selection (good overlap); it loses at strong selection and ties net** — *calibration
+  accuracy ≠ bidding value*. LR/LGB don't benefit (−4.8/−1.6). A 2nd self-correction — the over-bidding was
+  a data-contract bug, not fundamental miscalibration.
 
 > **The contribution is a characterization, not a new method** — *real but thin*, so naming the regions
 > where debiasing does **not** help is the whole point. We even implemented a genuine **DR** estimator and
@@ -66,7 +68,7 @@ isn't confused with "a stronger model wins."
 |---|---|---|---|---|
 | C1 | Debiasing edge depends on competitor strength | IPW **+4.4 pp** vs weak / **−1.9 pp** vs strong (capacity gap **+26.3 pp** shown separately) | `witnesses/phase_diagram.json` | **confirmed** (synthetic, 10 seeds) |
 | C2 | Recalibration over-bids marginal inventory | surplus **4.31M → 3.26M** (recal) vs **5.92M** (IPW), 5/5 seeds | `witnesses/recal_trap.json` | **confirmed** (synthetic) |
-| ★ | **Neural anchor** — real iPinYou features + the real **ESCM²-WC** | the −47pp over-bidding was a **censoring wiring bug**; fixed (`click·win`), the ESCM²-WC helps truthful bidding **+7.5 pp** (**+11** with selection-aware calibration) | `witnesses/neural_anchor.json` | **modest positive** (corrected) |
+| ★ | **Neural anchor** — real iPinYou features + the real **ESCM²-WC** | the −47pp over-bidding was a **censoring wiring bug**; fixed (`click·win`), the ESCM²-WC helps truthful bidding **+7.2 pp** (**+11** with calibration; selection-aware IPW beats naive only at weak selection — *accuracy ≠ bidding value*) | `witnesses/neural_anchor.json` | **modest positive** (corrected) |
 | — | DR (genuine) did **not** beat IPW here | **−2.6 pp** within linear (reported, not hidden) | `witnesses/phase_diagram.json` | honest negative |
 | ⚓ | Real-world anchor (the negative half) | robust vs LR, **not** vs LGB, **I²=0.82** | [`old/`](old/) (iPinYou fair-split) | canonical |
 
@@ -135,7 +137,7 @@ payprices**, and the **real neural ESCM²-WC** (Flax, the project's actual engin
 as the debiaser — across {LR, LGB, **neural ESCM²-WC**}. Primary metric = **truthful 2nd-price surplus**.
 
 <p align="center">
-  <img src="witnesses/figures/fig_neural_anchor.png" alt="The -47pp over-bidding was a censoring wiring bug; censoring click (click*win) fixes it, the ESCM2-WC helps truthful bidding +7.5pp, and selection-aware calibration adds more except at the strongest selection" width="900">
+  <img src="witnesses/figures/fig_neural_anchor.png" alt="The -47pp over-bidding was a censoring wiring bug; censoring click (click*win) fixes it (+7.2pp); a 2x2 test shows selection-aware IPW calibration beats naive only at weak selection (good ESS) and loses at strong selection" width="900">
 </p>
 
 > **2nd self-correction (a real bug, found by asking "can we fix it?").** A first pass showed the neural
@@ -146,16 +148,21 @@ as the debiaser — across {LR, LGB, **neural ESCM²-WC**}. Primary metric = **t
 > (mean → 0.127). Pre-fix numbers are frozen in `neural_anchor.json:_meta` for audit.
 
 - **The fix — censor click (`click·win`).** The over-bidding disappears: debiased pCTR no longer overshoots
-  (mean 0.083 → 0.065), and the **neural truthful edge becomes +7.5 pp** (was −47.2), positive in all six
-  cells (by-γ 6.8 / 7.8 / 7.8). It's a genuine recovery, not conservative bidding — debiased bids *higher*
-  than biased and wins *more* surplus. (*Caveat:* n=2 neural seeds/γ — trust the **sign**, magnitude under-powered.)
-- **Can we calibrate it further?** A bit, with an honest twist: naive isotonic-on-winners would *reintroduce*
-  the selection bias, so we use **selection-aware IPW-weighted isotonic** → **+10.9 pp**. But the
-  selection-aware *advantage* does **not** materialize here — naive calibration ties it (+11.0) and even
-  edges it at the strongest selection (γ=1.2: 9.1 vs 7.4, ESS↓). **The censoring fix did the heavy lifting.**
-  LR/LGB truthful edges stay **negative** (−4.8 / −1.6) — the neural debiaser is the one that helps.
+  (mean 0.083 → 0.064), and the **neural truthful edge becomes +7.2 pp** (was −47.2), positive in all six
+  cells (by-γ 5.1 / 7.6 / 8.7). It's a genuine recovery, not conservative bidding — debiased bids *higher*
+  than biased and wins *more* surplus. (*Caveat:* n=2 neural seeds/γ + mild p\* non-determinism — trust the
+  **sign/direction**, magnitudes under-powered.)
+- **Can we calibrate it further? And does selection-awareness pay?** A 2×2 test ({biased, debiased} ×
+  {naive, IPW-weighted isotonic}). Generic calibration helps (+7.2 → **+11.1** IPW, **+11.2** naive). But
+  the selection-aware **IPW beats naive *only at weak selection*** (γ=0.4, ESS 0.87: +1.2 pp) — there it
+  correctly lifts the level toward the marginal (0.050 → 0.060 vs naive 0.054). At **strong selection**
+  (ESS 0.63) its high-variance weights over-lift → **over-bid → it loses** (γ=1.2: −6.4 pp); net naive
+  ties/wins. The driver is **overlap (ESS)**, and the lesson is **calibration accuracy ≠ bidding value** —
+  a level-correct calibration over-bids near the margin (C2's trap at the calibration layer).
 - **Honest answer to "what's the problem / can we fix it":** the over-bidding was largely a **data-contract
-  bug**, not fundamental miscalibration; fixed, the ESCM²-WC helps (+7.5 pp), and calibration adds a bit more.
+  bug** (censoring), not fundamental miscalibration; fixed, the ESCM²-WC helps (+7.2 pp). The intuitive
+  "just calibrate it" helps a little, but the *principled* selection-aware variant has no net advantage —
+  it only pays when overlap is good. LR/LGB don't benefit (−4.8 / −1.6).
 - **C2 on real features.** The recal trap **reproduces for GBM** (−14.2 pp) but not LR/neural — capacity-dependent.
 
 > Honest: iPinYou-**grounded** semi-synthetic — p\*(x) a fitted surrogate, market fit to real payprices,

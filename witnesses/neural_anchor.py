@@ -332,9 +332,10 @@ def cell(payload, cap, gamma, seed):
         design = design_lr if cap == "linear" else design_lgb
         p_bias = fit_pred_sklearn(design, win, click, cap, False, pwin)
         p_deb = fit_pred_sklearn(design, win, click, cap, True, pwin)
-    p_rec = calibrate_naive(p_bias, click, win)            # biased + naive recal (C2 trap)
-    p_deb_naive = calibrate_naive(p_deb, click, win)       # debiased + naive cal (reintroduces selection bias)
-    p_deb_ipw = calibrate_ipw(p_deb, click, win, pwin)     # debiased + IPW cal (selection-aware fix)
+    p_rec = calibrate_naive(p_bias, click, win)            # biased + naive cal
+    p_bias_ipw = calibrate_ipw(p_bias, click, win, pwin)   # biased + IPW cal (2×2 test: does selection-aware win here?)
+    p_deb_naive = calibrate_naive(p_deb, click, win)       # debiased + naive cal
+    p_deb_ipw = calibrate_ipw(p_deb, click, win, pwin)     # debiased + IPW cal
     rec = lambda p: {"mean": round(float(p.mean()), 3), "std": round(float(p.std()), 3)}
     return {"capacity": cap, "gamma": gamma, "seed": seed, "win_rate": round(float(win.mean()), 3),
             "ess_ratio": round(ipw_ess(win, pwin), 3),
@@ -351,6 +352,11 @@ def cell(payload, cap, gamma, seed):
             "truthful_edge_naivecal_pp": round((rtr(p_bias) - rtr(p_deb_naive)) * 100, 2),
             "truthful_edge_ipwcal_pp": round((rtr(p_bias) - rtr(p_deb_ipw)) * 100, 2),
             "recal_edge_pp": round((rtr(p_bias) - rtr(p_rec)) * 100, 2),
+            # 2×2 calibration test — IPW vs naive on the BIASED model (regret; lower=better; +adv ⇒ IPW better)
+            "truthful_regret_bias_naivecal": round(rtr(p_rec), 3), "truthful_regret_bias_ipwcal": round(rtr(p_bias_ipw), 3),
+            "bias_ipw_minus_naive_pp": round((rtr(p_rec) - rtr(p_bias_ipw)) * 100, 2),     # >0 ⇒ IPW beats naive on biased
+            "deb_ipw_minus_naive_pp": round((rtr(p_deb_naive) - rtr(p_deb_ipw)) * 100, 2),  # >0 ⇒ IPW beats naive on debiased
+            "pctr_bias_naivecal": rec(p_rec), "pctr_bias_ipwcal": rec(p_bias_ipw),
             "decompose": {"biased": _dec(p_bias, pctr, mprice), "recal": _dec(p_rec, pctr, mprice),
                           "debiased": _dec(p_deb, pctr, mprice), "debiased_ipwcal": _dec(p_deb_ipw, pctr, mprice),
                           "oracle_surplus": round(s_or, 1)}}
@@ -410,6 +416,15 @@ def summarize(cells, base_rate, MU, SIG):
     s["naive_calibration_helps_truthful"] = bool(s["truthful_edge_neural_naivecal_pp"] > s["truthful_edge_neural_pp"])
     s["calibration_does_not_fix_truthful"] = bool(not s["ipw_calibration_helps_truthful"])
     s["ipw_cal_hurts_strong_selection"] = bool(s["truthful_edge_neural_ipwcal_by_gamma"][1.2] < s["truthful_edge_neural_by_gamma"][1.2])
+    # --- 2×2 test: does selection-aware IPW calibration beat NAIVE on the BIASED model (vs debiased)? ---
+    s["bias_ipw_minus_naive_neural_pp"] = mean("bias_ipw_minus_naive_pp", "neural")   # >0 ⇒ IPW better on biased
+    s["deb_ipw_minus_naive_neural_pp"] = mean("deb_ipw_minus_naive_pp", "neural")     # >0 ⇒ IPW better on debiased
+    s["bias_ipw_minus_naive_by_gamma"] = bg("bias_ipw_minus_naive_pp", "neural")
+    nn2 = [c for c in cells if c["capacity"] == "neural"]
+    s["pctr_bias_naivecal_mean"] = round(float(np.mean([c["pctr_bias_naivecal"]["mean"] for c in nn2])), 3)
+    s["pctr_bias_ipwcal_mean"] = round(float(np.mean([c["pctr_bias_ipwcal"]["mean"] for c in nn2])), 3)
+    s["ipw_beats_naive_on_biased"] = bool(s["bias_ipw_minus_naive_neural_pp"] > 0)        # the falsifiable hypothesis
+    s["ipw_lifts_level_more_than_naive"] = bool(s["pctr_bias_ipwcal_mean"] > s["pctr_bias_naivecal_mean"])  # mechanism (IPW→marginal)
     s["base_rate"] = round(float(base_rate), 4)
     s["market_mu"], s["market_sig"] = round(MU, 3), round(SIG, 3)
     s["n_pool"], s["sk_seeds"], s["nn_seeds"] = N_POOL, SK_SEEDS, NN_SEEDS
@@ -454,6 +469,8 @@ def main():
                   "n_pool": N_POOL, "n_pstar_fit": N_PSTAR, "CPC": CPC, "base_rate": summ["base_rate"],
                   "capacities": "linear (LR, one-hot), gbm (LGB native cat), NEURAL (ESCM²-WC Flax, DR loss + matching biased tower)",
                   "edge_definition": "WITHIN-CAPACITY: regret(biased) − regret(debiased), same model class",
+                  "caveat": "n=2 neural seeds/γ AND the p* LightGBM fit is mildly non-deterministic (~±0.3pp run-to-run); "
+                            "trust the SIGN/DIRECTION of the neural results, not the exact magnitudes. repro asserts robust flags only.",
                   "metric_primary": "truthful 2nd-price decision-value regret (bid = p̂·CPC) — same as phase_diagram/recal_trap",
                   "metric_secondary": "best-case under OPTIMAL linear bid-shading (bid = α·p̂·CPC) — rewards spread; report alongside truthful, never instead",
                   "fix": "ESCM²-WC training now feeds CENSORED click (click*win), matching the real-iPinYou contract the "
@@ -502,9 +519,46 @@ def probe():
     print("Q1 censoring reduces overshoot? compare cens vs uncens mean. Q2 IPW-cal truthful≥0? Q3 cens alone≥0?")
 
 
+def probe_biascal():
+    """Curiosity test (no assumed answer): does selection-aware IPW calibration beat NAIVE when calibrating
+    the BIASED model (selection bias still present), vs the DEBIASED model (bias already removed)? And does
+    the IPW advantage survive at strong selection where overlap/ESS is poor? Edge = regret(naive)−regret(ipw)
+    in pp (>0 ⇒ IPW better). ~3 min GPU1."""
+    global CPC
+    df = _read_rows(300_000, CAT + NUM + ["win", "click", "payprice"])
+    for c in STR_CAT:
+        df[c], _ = pd.factorize(df[c])
+    for c in CAT:
+        df[c] = df[c].astype("int64").clip(lower=0)
+    mean, std = META["normalization_stats"]["mean"], META["normalization_stats"]["std"]
+    for c in NUM:
+        df[c] = (df[c].astype("float64") - mean[c]) / (std[c] + 1e-9)
+    pstar, MU, SIG, _ = fit_pstar_and_market(df)
+    CPC = float(np.exp(MU) / max(pstar.mean(), 1e-4))
+    df = df.iloc[:60_000].reset_index(drop=True); pstar = pstar[:60_000]
+    x, fd = _design_neural(df); design_lgb = _design_lgb(df)
+    print(f"PROBE-BIASCAL  true pCTR {pstar.mean():.3f}  CPC {CPC:.0f}")
+    print("  Q: does IPW-cal beat naive-cal on the BIASED model? bigger than on the DEBIASED model? at strong γ?")
+    for g in (0.4, 1.2):
+        win, click, m = make_population(pstar, MU, SIG, g, 7)
+        pwin = win_propensity(design_lgb, win)
+        s_or = surplus(pstar, pstar, m); rtr = lambda p: (s_or - surplus(p, pstar, m)) / s_or
+        pb = train_biased_neural(x, win, click, fd, 7)
+        pc = train_escm2wc_neural(x, win, click, fd, 7, censor=True)
+        bn, bi = calibrate_naive(pb, click, win), calibrate_ipw(pb, click, win, pwin)
+        cn, ci = calibrate_naive(pc, click, win), calibrate_ipw(pc, click, win, pwin)
+        ipw_adv = lambda n, i: round((rtr(n) - rtr(i)) * 100, 1)   # >0 ⇒ IPW beats naive
+        print(f"  γ={g} (ESS {ipw_ess(win,pwin):.2f}) | true mean 0.083")
+        print(f"    BIASED  raw {pb.mean():.3f} | naive {bn.mean():.3f} | IPW {bi.mean():.3f}  → IPW−naive {ipw_adv(bn,bi):+.1f}pp")
+        print(f"    DEBIAS  raw {pc.mean():.3f} | naive {cn.mean():.3f} | IPW {ci.mean():.3f}  → IPW−naive {ipw_adv(cn,ci):+.1f}pp")
+    print("  Read: IPW−naive >0 ⇒ IPW better. Hypothesis = larger on BIASED than DEBIASED; check if it holds at γ=1.2.")
+
+
 if __name__ == "__main__":
     import sys
-    if "--probe" in sys.argv:
+    if "--probe-biascal" in sys.argv:
+        probe_biascal()
+    elif "--probe" in sys.argv:
         probe()
     else:
         main()
