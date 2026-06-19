@@ -11,8 +11,10 @@
 > - **C1**(within-capacity, IPW): edge **+4.4pp** vs linear / **−1.9pp** vs GBM; capacity gap **+26.3pp** 별도(디바이어싱 아님).
 >   *초기 +24.2pp는 capacity confound였고 적대리뷰가 적발→교정.* `witnesses/phase_diagram.json`
 > - **C2**(recalibration trap): surplus **4.3M→3.26M**(recal) vs **5.92M**(IPW), 5/5 robust — `witnesses/recal_trap.json`
-> - **★ Neural anchor**(cautionary, 실 feature + 실 ESCM²-WC): ESCM²-WC가 붕괴 분산 복원하나 레벨 overshoot →
->   **truthful edge −47pp**(과입찰), +23.5pp는 optimal shading서만. 교훈=디바이어發 C2 trap. `witnesses/neural_anchor.json`
+> - **★ Neural anchor**(실 feature + 실 ESCM²-WC; 2회 교정): 첫 "truthful edge −47pp 과입찰"은 대부분
+>   **censoring 배선 버그**(uncensored 합성 click을 censored-click 기대 loss에 먹임)였음. **수정(`click·win`) 후
+>   ESCM²-WC가 truthful bidding을 진짜로 도움 +7.5pp**(γ 일관; n=2 seed/γ라 부호만 신뢰), IPW/naive calibration이
+>   비슷하게 +11(IPW의 selection-aware 우위는 미발현). LR/LGB는 음수. −47pp/+23.5pp는 frozen pre-fix(`_meta`). `witnesses/neural_anchor.json`
 > - 새 front = `README.md`/`README.ko.md` + `concept/methods/review/MANIFEST.md` + `witnesses/`(+neural_anchor) + `repro/`.
 > - **과거 iPinYou 포트폴리오 전체 → `old/`** (Foundation·실세계 anchor). 아래 로그는 그 foundation의 기록.
 

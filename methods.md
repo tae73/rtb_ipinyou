@@ -89,54 +89,58 @@ GBM (LightGBM ≈ LGB)}**. 각 cap에서:
 맞춤). **Robust:** 5 seeds 모두에서 recal은 surplus를 낮추고(5/5) IPW는 높였으며(5/5), recal 입찰 인플레는
 평균 **+42.7%**. 강한 GBM baseline에선 trap이 약하다(`recal_trap.json:gbm_strong`: recal 8.96M→8.69M) — C1과 일관.
 
-## 6. Neural anchor — real iPinYou features + the real ESCM²-WC (a cautionary result)
+## 6. Neural anchor — real iPinYou features + the real ESCM²-WC
 
 `witnesses/neural_anchor.py`. Closes the two residual critiques (Gaussian toys; the real neural model
-unused) with an **iPinYou-grounded semi-synthetic**: **real feature vectors** (800K-row subsample of the
-90.6M-row parquet, **29 real features**), ground-truth **p\*(x) = LightGBM fit to REAL winner clicks**
-(real feature→click shape, base rate rescaled to a learnable ~0.08), market **lognormal fit to REAL winner
-payprices** (MU 3.89, SIG 0.92), selection strength γ a knob. Same within-capacity experiment across
-**cap ∈ {linear (LR), gbm (LGB), neural (real ESCM²-WC, Flax, DR loss + a matching-capacity biased tower)}**
-(10 seeds: sklearn 3, neural 2). **Primary metric = truthful 2nd-price surplus** (bid = p̂·CPC, *same as
-phase_diagram/recal_trap*); we ALSO report best-case under **optimal linear bid-shading** (bid = α·p̂·CPC).
+unused) with an **iPinYou-grounded semi-synthetic**: **real feature vectors** (800K of the 90.6M-row
+parquet, **29 features**), ground-truth **p\*(x) = LightGBM fit to REAL winner clicks** (base rate ~0.08),
+market **lognormal fit to REAL winner payprices** (MU 3.89, SIG 0.92), selection strength γ a knob. The
+debiaser is the **real ESCM²-WC** (Flax, DR loss, imported from `old/src/`) + a matching-capacity biased
+tower; capacities {LR, LGB, neural}; **primary metric = truthful 2nd-price surplus** (bid = p̂·CPC).
 
-> **Adversarial-honesty note.** A first pass headlined a "+23.5 pp neural debiasing edge." An adversarial
-> review caught that this is **metric-specific**: it holds only under optimal shading; under the project's
-> **primary truthful-bid metric the result reverses** (mean **−47 pp** neural). We re-report both. The
-> shading metric is *not* a pure ranking metric — a single global α cannot fix a wrong level, so it
-> **rewards spread** and flatters an over-spread model. So we present this as a **cautionary** finding.
+> **2nd self-correction (a real bug, found by asking "can we fix it?").** A first pass reported the neural
+> debiaser **over-bidding** under truthful bidding (edge **−47 pp**) and framed it as "restores ranking but
+> overshoots calibration." Reading the ESCM²-WC loss revealed the overshoot was **mostly a wiring bug in
+> the testbed, not the method**: `train_escm2wc_neural` fed *uncensored* synthetic click, but the joint-BCE
+> term `BCE(p_win·p_ctr, click)` is written for the real-iPinYou contract where **click is censored to 0 on
+> losses** (real data: click==0 wherever win==0). Uncensored, loser clicks inflate p_ctr (mean → 0.127).
+> The pre-fix numbers are frozen in `neural_anchor.json:_meta.frozen_prefix_result` for audit.
 
-**Mechanism — collapse, then OVERSHOOT** (`summary.pctr_recovery_neural`): win-selection bias **collapses**
-the biased neural pCTR — mean 0.083 → **0.050**, spread (std) 0.153 → **0.056**. The real ESCM²-WC restores
-the spread (std → **0.198**) but **overshoots the level** (mean → **0.127**, ≈1.5× true; std ≈1.3× true) —
-a known DR-pseudo-label + joint-BCE entire-space inflation.
+**The fix — censor click (`click·win`).** The over-bidding disappears. The debiased pCTR no longer
+overshoots (mean 0.083 → **0.065**, a slight *under*-shoot, vs the buggy 0.127), and the **neural truthful
+edge becomes +7.5 pp** (was −47.2), positive across all six cells (by-γ 6.8 / 7.8 / 7.8). It is a genuine
+recovery, not conservative bidding: the debiased model bids **higher** than biased (e.g. 22 → 32) and wins
+**more** surplus in every cell. *Caveat:* only **n=2 neural seeds/γ** (~3 pp seed-to-seed scatter) — trust
+the **sign** (robustly positive; LR/LGB stay −4.8 / −1.6), treat the magnitude as under-powered.
 
-**The metric reversal** (`summary`, neural, by γ):
+**Can post-hoc calibration improve it further?** A bit — with an honest twist. Naive isotonic-on-winners
+would *reintroduce* the selection bias (winners are the low-pCTR group), so we use **selection-aware
+IPW-weighted isotonic** (calibrate to the *marginal* via `1/P(win|x)` weights). Result:
 
-| metric | mean edge | γ = 0.4 → 0.8 → 1.2 |
+| neural truthful edge | mean | γ = 0.4 → 0.8 → 1.2 |
 |---|---|---|
-| **truthful bid p̂·CPC** (primary) | **−47.2 pp** | **+7.7** → −29.2 → **−120.2** |
-| optimal bid-shading (best-case) | +23.5 pp | +13.3 → +34.3 → +22.9 |
+| debiased (censored, no cal) | **+7.5 pp** | +6.8 → +7.8 → +7.8 |
+| + IPW-weighted calibration | **+10.9 pp** | +8.8 → +16.5 → **+7.4** |
+| + naive calibration | +11.0 pp | +8.1 → +15.8 → +9.1 |
 
-→ **Honest reading.** At **weak** selection (γ=0.4) the ESCM²-WC is well-calibrated and **genuinely helps
-truthful bidding** (+7.7 pp; won surplus 5.97M → 6.68M). At **strong** selection it **over-bids into
-losses** — debiased truthful won surplus goes **negative** (−1.06M, −1.32M at γ=1.2; unprofitable-win share
-up to 0.59) while biased stays positive. The restored spread only becomes a *gain* under optimal shading,
-which rescales the over-bidding away. **This is the recalibration trap (C2) reappearing from the debiaser
-itself:** a wrong *level* (whether from naive recal or from an over-restoring DR model) → over-bid →
-negative surplus. **Debiasing restores ranking; calibration is still required to bid.** (LR/LGB truthful
-edges are also negative, −4.8/−1.6 pp; LR shaded +0.7, LGB −0.2.)
+→ Calibration helps **on average** (+7.5 → ~+11 pp), but **the selection-aware advantage of IPW does NOT
+materialize here**: IPW (+10.9) and naive (+11.0) are essentially tied, the gain is **non-monotone** in γ
+(peaks at γ=0.8 then drops), and at the **strongest selection naive even edges IPW** (γ=1.2: 9.1 vs 7.4),
+where overlap degrades (ESS falls with γ — mean 0.74, ~0.63 at γ=1.2). Honest reading: **the censoring fix
+did the heavy lifting; calibration adds a small lift and the principled IPW variant shows no edge over naive
+in this regime.** (Best-case optimal-shading edge is +7.6 pp ≈ the truthful one — no metric reversal now
+that the level is right.)
 
-**C2 — recalibration trap on real features** (`summary`, truthful): reproduces for **GBM** (recal edge
-**−14.3 pp** mean; **−36 to −39 pp** at γ=1.2) but **not** for LR (+1.6) or the neural model (+2.8) — the
-biased neural *under-predicts*, so recalibration raises it toward truth and helps. Capacity-dependent.
+**C2 — recalibration trap on real features** (`summary`, truthful): still reproduces for **GBM** (recal
+edge **−14.2 pp**) but not LR/neural — capacity-dependent, as before.
 
 <p align="center"><img src="witnesses/figures/fig_neural_anchor.png" width="900"></p>
 
-> Honest: `[sketch·합성검증]` on an iPinYou-GROUNDED semi-synthetic — p\*(x) is a fitted surrogate, market
-> fit to real payprices, selection synthesized; decision-value is unmeasurable on real iPinYou (data
-> ceiling). **Truthful surplus is primary; optimal-shading is best-case and rewards spread — reported
-> alongside, never instead.** Numbers verbatim from `witnesses/neural_anchor.json`.
+> Honest: `[sketch·합성검증]` on an iPinYou-GROUNDED semi-synthetic — p\*(x) a fitted surrogate, market fit
+> to real payprices, selection synthesized; decision-value unmeasurable on real iPinYou (data ceiling). The
+> direct answer to "what's the problem / can we fix it": **the over-bidding was largely a data-contract bug,
+> not fundamental miscalibration; fixed, the ESCM²-WC helps (+7.5 pp), and selection-aware calibration adds
+> a bit more (except at extreme selection).** Numbers verbatim from `witnesses/neural_anchor.json`.
 
 ## 7. Honest scope
 - `[sketch·합성검증]` — semi-synthetic. 결론은 *언제/왜*의 **특성화**이지 새 방법이 아니다.

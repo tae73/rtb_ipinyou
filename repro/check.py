@@ -48,16 +48,16 @@ def neural_checks():
     s = json.load(open(p))["summary"]
     rec = s["pctr_recovery_neural"]
     assert s["biased_pctr_collapsed"] is True, rec               # win-selection collapses the biased neural pCTR
-    assert s["debiasing_restores_spread"] is True, rec           # ESCM²-WC restores the collapsed spread...
-    assert s["debiasing_overshoots_level"] is True, rec          # ...but OVERSHOOTS the level
-    assert s["truthful_edge_negative_neural"] is True, s         # PRIMARY metric: it over-bids into losses
-    assert s["shaded_edge_positive_neural"] is True, s           # +edge only under optimal shading
-    assert s["edge_reverses_by_metric"] is True, s               # the honest headline: shaded + reverses to truthful −
-    assert s["recal_trap_holds_gbm"] is True, s                  # C2 recal-trap reproduces for GBM on real features
-    print("NEURAL GREEN (cautionary) — ESCM²-WC restores collapsed pCTR spread (%.3f→%.3f) but overshoots level "
-          "(mean %.3f→%.3f); TRUTHFUL edge %.1fpp (over-bids) vs SHADED %.1fpp — reverses by metric." % (
-          rec["biased_std"], rec["debiased_std"], rec["true_mean"], rec["debiased_mean"],
-          s["truthful_edge_neural_pp"], s["shaded_edge_neural_pp"]))
+    assert s["censoring_fixes_overbidding"] is True, s           # censoring click (click·win) fixes the −47pp over-bidding
+    assert s["truthful_edge_neural_pp"] > 0, s                   # corrected: ESCM²-WC genuinely helps truthful bidding
+    assert s["debiased_undershoots_level"] is True, rec         # censored model now under-predicts (no overshoot)
+    assert s["ipw_calibration_helps_truthful"] is True, s       # selection-aware calibration further improves it...
+    assert s["ipw_cal_hurts_strong_selection"] is True, s       # ...but its gain vanishes at the strongest selection
+    assert s["recal_trap_holds_gbm"] is True, s                 # C2 recal-trap still reproduces for GBM
+    print("NEURAL GREEN (corrected) — censoring click fixes the −47pp over-bidding → neural truthful edge "
+          "%+.1fpp (was %.1f); +IPW-cal %+.1fpp (gain vanishes at strong γ); pCTR mean %.3f→%.3f (no overshoot)." % (
+          s["truthful_edge_neural_pp"], s["frozen_prefix_truthful_edge_neural_pp"],
+          s["truthful_edge_neural_ipwcal_pp"], rec["biased_mean"], rec["debiased_mean"]))
 
 
 def live_check():

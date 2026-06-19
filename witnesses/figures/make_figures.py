@@ -106,42 +106,43 @@ def fig_neural_anchor():
     if not p.exists():
         print("  (skip fig_neural_anchor — neural_anchor.json not found)")
         return
-    s = json.load(open(p))["summary"]
-    rec = s["pctr_recovery_neural"]
-    gammas = sorted(float(g) for g in s["shaded_edge_neural_by_gamma"])
+    j = json.load(open(p))
+    s = j["summary"]
+    frozen = j["_meta"]["frozen_prefix_result"]["truthful_edge_neural_by_gamma"]
+    gammas = sorted(float(g) for g in s["truthful_edge_neural_by_gamma"])
+    gk = lambda d, g: d[f"{g:g}"]
     fig, axes = plt.subplots(1, 2, figsize=(13.2, 5.0))
-    # Panel A: pCTR — selection collapses the biased model; ESCM²-WC restores spread but OVERSHOOTS the level
+    # Panel A: the -47pp was a WIRING BUG — censoring click (click*win) fixes the over-bidding
     ax = axes[0]
-    labels = ["true p*(x)", "biased\n(winners-only)", "debiased\n(ESCM²-WC)"]
-    means = [rec["true_mean"], rec["biased_mean"], rec["debiased_mean"]]
-    stds = [rec["true_std"], rec["biased_std"], rec["debiased_std"]]
-    bars = ax.bar(labels, means, yerr=stds, color=[ANCHOR_PURPLE, NEG, POS], edgecolor="white", width=0.62,
-                  zorder=3, error_kw={"ecolor": INK, "capsize": 5, "lw": 1.2})
-    ax.axhline(rec["true_mean"], ls="--", color=ANCHOR_PURPLE, lw=1, zorder=1)
-    for b, m, sd in zip(bars, means, stds):
-        ax.text(b.get_x() + b.get_width() / 2, m + sd + 0.004, f"{m:.3f}\n±{sd:.3f}", ha="center",
-                va="bottom", fontsize=9.5, fontweight="bold")
-    ax.set_ylabel("predicted pCTR  (mean ± std)")
-    ax.margins(y=0.22)
-    ax.set_title("Selection COLLAPSES the biased pCTR; ESCM²-WC\nrestores spread but OVERSHOOTS the level (mean 1.5× true)",
-                 fontsize=10, fontweight="bold")
-    # Panel B: the metric reversal — shaded edge (best-case) is +, truthful edge (primary) goes NEGATIVE
-    ax = axes[1]
-    sh = [s["shaded_edge_neural_by_gamma"][f"{g:g}"] for g in gammas]
-    tr = [s["truthful_edge_neural_by_gamma"][f"{g:g}"] for g in gammas]
-    ax.plot(gammas, sh, "o-", color=POS, lw=2.4, ms=8, label="optimal bid-shading (best case)")
-    ax.plot(gammas, tr, "s-", color=NEG, lw=2.4, ms=8, label="TRUTHFUL bid p̂·CPC (primary metric)")
+    unc = [gk(frozen, g) for g in gammas]
+    cen = [gk(s["truthful_edge_neural_by_gamma"], g) for g in gammas]
+    ax.plot(gammas, unc, "s--", color=NEG, lw=2.2, ms=8, label="uncensored click (the bug)")
+    ax.plot(gammas, cen, "o-", color=POS, lw=2.4, ms=8, label="censored click·win (the fix)")
     ax.axhline(0, color=INK, lw=1)
-    ax.fill_between(gammas, tr, 0, where=[t < 0 for t in tr], color=NEG, alpha=0.10)
-    for g, t in zip(gammas, tr):
-        ax.text(g, t - 4, f"{t:+.0f}", ha="center", va="top", fontsize=9, color=NEG, fontweight="bold")
+    for g, u, c in zip(gammas, unc, cen):
+        ax.text(g, u - 6, f"{u:+.0f}", ha="center", va="top", fontsize=8.5, color=NEG, fontweight="bold")
+        ax.text(g, c + 4, f"{c:+.1f}", ha="center", va="bottom", fontsize=8.5, color=POS, fontweight="bold")
     ax.set_xlabel("win-selection-bias strength  γ")
-    ax.set_ylabel("neural debiasing edge (pp)")
+    ax.set_ylabel("neural TRUTHFUL-bid edge (pp)")
     ax.legend(fontsize=9, loc="lower left")
-    ax.set_title("The +edge is SHADING-specific: under truthful bidding the\novershoot over-bids into losses at strong selection",
+    ax.set_title("The −47pp over-bidding was a WIRING BUG:\ncensoring click (click·win) fixes it",
                  fontsize=10, fontweight="bold")
-    fig.suptitle("Neural anchor — the real ESCM²-WC restores ranking but is MISCALIBRATED for truthful bidding",
-                 fontsize=12, fontweight="bold", y=1.03)
+    # Panel B: the intuitive fix (post-hoc calibration) does NOT help — IPW-cal even HURTS at strong selection
+    ax = axes[1]
+    raw = [gk(s["truthful_edge_neural_by_gamma"], g) for g in gammas]
+    ipw = [gk(s["truthful_edge_neural_ipwcal_by_gamma"], g) for g in gammas]
+    nai = [gk(s["truthful_edge_neural_naivecal_by_gamma"], g) for g in gammas]
+    ax.plot(gammas, raw, "o-", color=POS, lw=2.4, ms=8, label="debiased (censored, no cal)")
+    ax.plot(gammas, ipw, "D-", color=GBM_C, lw=2.2, ms=7, label="+ IPW-weighted calibration")
+    ax.plot(gammas, nai, "v-", color=LINEAR_C, lw=2.0, ms=7, label="+ naive calibration")
+    ax.axhline(0, color=INK, lw=1)
+    ax.set_xlabel("win-selection-bias strength  γ")
+    ax.set_ylabel("neural TRUTHFUL-bid edge (pp)")
+    ax.legend(fontsize=9, loc="upper right")
+    ax.set_title("Calibration further helps (+7.5→+11pp avg) —\nbut IPW-cal's gain vanishes at the strongest selection (ESS↓)",
+                 fontsize=10, fontweight="bold")
+    fig.suptitle("Neural anchor (corrected) — the over-bidding was a censoring bug; fixed, the ESCM²-WC helps truthfully (+7.5pp)",
+                 fontsize=11.5, fontweight="bold", y=1.03)
     _save(fig, "fig_neural_anchor.png")
 
 
