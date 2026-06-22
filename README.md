@@ -20,6 +20,11 @@
   <img src="witnesses/figures/fig_phase_diagram.png" alt="Within-capacity phase diagram: IPW debiasing helps a weak linear model (grows with selection) but not a strong GBM; the big apparent edge is model capacity, not debiasing" width="900">
 </p>
 
+> ▶ **Runnable demo** ([`notebooks/demo.ipynb`](notebooks/demo.ipynb) · [rendered HTML](notebooks/demo.html)) —
+> a live, CPU-only (no data/GPU) walkthrough: market-calibrated testbed → biased vs debiased click model →
+> **bid → auction → surplus/ROI**, the recalibration trap, bid shading, and the phase-diagram / neural-anchor
+> findings. `pip install -r requirements.txt && jupyter notebook notebooks/demo.ipynb`.
+
 ---
 
 ### 🧭 Navigate by time

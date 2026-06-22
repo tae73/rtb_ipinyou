@@ -20,6 +20,11 @@
   <img src="witnesses/figures/fig_phase_diagram.png" alt="within-capacity phase diagram: IPW 디바이어싱은 약한 linear 모델을 돕지만(selection 강도와 함께 증가) 강한 GBM은 못 돕는다; 큰 겉보기 edge는 디바이어싱이 아니라 모델 용량" width="900">
 </p>
 
+> ▶ **실행 가능한 데모** ([`notebooks/demo.ipynb`](notebooks/demo.ipynb) · [렌더된 HTML](notebooks/demo.html)) —
+> CPU만으로(데이터/GPU 불필요) 라이브 walkthrough: 시장-calibrated testbed → biased vs debiased 클릭 모델 →
+> **입찰 → 경매 → surplus/ROI**, recalibration trap, bid shading, phase-diagram·neural-anchor 결과.
+> `pip install -r requirements.txt && jupyter notebook notebooks/demo.ipynb`.
+
 ---
 
 ### 🧭 시간으로 탐색
